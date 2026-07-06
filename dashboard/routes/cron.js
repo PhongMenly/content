@@ -4,6 +4,7 @@ const { postText, postPhoto, getPostInsights } = require("../lib/facebook");
 const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
 const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
 const { generateReport } = require("../lib/telegram/insights");
+const { runBackup } = require("../lib/backup");
 
 const OWNER_CHAT_ID = 8481163556;
 
@@ -77,6 +78,15 @@ router.get("/telegram-daily-report", checkCronAuth, async (req, res) => {
     const report = await generateReport();
     await sendMessage(OWNER_CHAT_ID, "BAO CAO INSIGHTS HANG NGAY TU NHI:\n\n" + report);
     res.json({ sent: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/db-backup", checkCronAuth, async (req, res) => {
+  try {
+    const result = await runBackup();
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

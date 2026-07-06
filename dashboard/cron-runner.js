@@ -121,7 +121,8 @@ async function dailyBackup() {
   if (now.getHours() === 2 && lastBackupDate !== today) {
     lastBackupDate = today;
     try {
-      const rows = await runBackup();
+      const result = await runBackup();
+      const rows = result && result.rowCount !== undefined ? result.rowCount : result;
       log(`Backup DB xong (${rows} rows)`);
       await notifyTelegram(`Backup du lieu hang ngay OK (${rows} dong).`);
     } catch (err) {
