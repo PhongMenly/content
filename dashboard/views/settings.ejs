@@ -1,0 +1,80 @@
+<%- include('partials/header', { pageTitle: 'Cài đặt', active: 'settings' }) %>
+
+<div class="toolbar">
+  <h2>Chia sẻ lên nhóm Facebook</h2>
+</div>
+
+<div class="settings-card">
+  <div id="fb-login-status" class="schedule-info"></div>
+  <label class="block-label">Danh sách nhóm (mỗi dòng 1 link, dạng https://www.facebook.com/groups/...)
+    <textarea id="groups-input" rows="8" placeholder="https://www.facebook.com/groups/nhom-cua-ban"></textarea>
+  </label>
+  <div class="settings-row">
+    <label class="block-label" style="max-width:220px">Số nhóm tối đa mỗi lần chia sẻ
+      <input type="number" id="max-per-run" min="1" max="10" value="5" />
+    </label>
+    <button id="save-groups-btn" class="btn btn-primary">Lưu cài đặt</button>
+    <span id="save-result" class="fb-subtext"></span>
+  </div>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
+  <h2>Kết quả chia sẻ nhóm gần nhất</h2>
+</div>
+<div class="settings-card">
+  <ul id="share-log" class="history-list"><li>Chưa có dữ liệu</li></ul>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
+  <h2>Nhật ký hệ thống tự đăng (cron)</h2>
+</div>
+<div class="settings-card">
+  <pre id="cron-log" class="cron-log">Đang tải...</pre>
+</div>
+
+<script>
+  async function loadSettings() {
+    const res = await fetch('/api/settings/groups');
+    const data = await res.json();
+    document.getElementById('groups-input').value = (data.groups || []).join('\n');
+    document.getElementById('max-per-run').value = data.maxPerRun || 5;
+    const statusEl = document.getElementById('fb-login-status');
+    statusEl.textContent = data.fbLoggedIn
+      ? 'Đã đăng nhập Facebook cho bot chia sẻ.'
+      : 'CHƯA đăng nhập Facebook. Mở PowerShell chạy: cd d:\\Content-Creation-Template\\facebook-bot rồi node share-groups.js --setup';
+    if (!data.fbLoggedIn) statusEl.style.background = '#FDF3D7', statusEl.style.color = '#92600A';
+  }
+
+  async function loadLogs() {
+    const res = await fetch('/api/settings/share-log');
+    const data = await res.json();
+    if (data.lastResult && data.lastResult.length) {
+      document.getElementById('share-log').innerHTML = data.lastResult
+        .map(r => `<li>${r.ok ? 'OK' : 'LỖI'} — ${r.url}${r.error ? ' — ' + r.error : ''}</li>`)
+        .join('');
+    }
+    if (data.cronTail && data.cronTail.length) {
+      document.getElementById('cron-log').textContent = data.cronTail.join('\n');
+    }
+  }
+
+  document.getElementById('save-groups-btn').addEventListener('click', async () => {
+    const groups = document.getElementById('groups-input').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const maxPerRun = document.getElementById('max-per-run').value;
+    const res = await fetch('/api/settings/groups', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groups, maxPerRun }),
+    });
+    const data = await res.json();
+    document.getElementById('save-result').textContent = res.ok
+      ? `Đã lưu ${data.saved} nhóm hợp lệ.`
+      : 'Lỗi lưu cài đặt';
+    loadSettings();
+  });
+
+  loadSettings();
+  loadLogs();
+</script>
+
+<%- include('partials/footer') %>

@@ -12,6 +12,7 @@ const scheduleRouter = require("./routes/schedule");
 const libraryRouter = require("./routes/library");
 const cronRouter = require("./routes/cron");
 const statsRouter = require("./routes/stats");
+const settingsRouter = require("./routes/settings");
 
 const app = express();
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 4000;
@@ -35,6 +36,7 @@ app.use("/api/credits", creditsRouter);
 app.use("/api/schedule", scheduleRouter);
 app.use("/api/library", libraryRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/settings", settingsRouter);
 
 app.get("/", (req, res) => {
   res.render("index");
@@ -56,6 +58,10 @@ app.get("/calendar", (req, res) => {
 
 app.get("/stats", (req, res) => {
   res.render("stats");
+});
+
+app.get("/settings", (req, res) => {
+  res.render("settings");
 });
 
 app.use((err, req, res, next) => {
