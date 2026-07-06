@@ -1,0 +1,42 @@
+<%- include('partials/header', { pageTitle: 'Bài viết', active: 'posts' }) %>
+
+<div class="toolbar">
+  <h2>Quản lý bài viết theo trạng thái</h2>
+  <button id="new-post-btn" class="btn btn-primary">+ Tạo bài mới</button>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-status="">Tất cả</button>
+  <button class="filter-btn" data-status="draft">Bản nháp</button>
+  <button class="filter-btn" data-status="ready_for_review">Chờ duyệt</button>
+  <button class="filter-btn" data-status="scheduled">Đã lên lịch</button>
+  <button class="filter-btn" data-status="posted">Đã đăng</button>
+</div>
+
+<div id="post-list" class="post-list">
+  <!-- Populated by app.js -->
+</div>
+
+<dialog id="new-post-dialog">
+  <form id="new-post-form">
+    <h2>Tạo bài viết mới</h2>
+    <label>Tiêu đề<input type="text" name="title" required /></label>
+    <label>Nền tảng
+      <select name="platform">
+        <option value="Facebook">Facebook</option>
+        <option value="Instagram">Instagram</option>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="X">X</option>
+        <option value="TikTok">TikTok</option>
+      </select>
+    </label>
+    <label>Pillar<input type="text" name="pillar" placeholder="VD: AI Thực chiến" /></label>
+    <label>Nội dung<textarea name="body" rows="10"></textarea></label>
+    <div class="dialog-actions">
+      <button type="button" id="cancel-new-post" class="btn">Hủy</button>
+      <button type="submit" class="btn btn-primary">Tạo bài</button>
+    </div>
+  </form>
+</dialog>
+
+<%- include('partials/footer') %>

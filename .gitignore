@@ -1,0 +1,22 @@
+# API keys — không bao giờ commit
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Runtime / state
+logs/
+*.log
+.browser-profile/
+telegram-bot/bot-memory.json
+telegram-bot/review-state.json
+telegram-bot/insights.json
+backups/
+
+# Outputs tạm
+outputs/temp/
+
+# Vercel
+.vercel

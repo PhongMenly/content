@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng nhập — Phong Menly Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="login-page">
+    <form method="POST" action="/login" class="login-form">
+      <h1>Phong Menly Dashboard</h1>
+      <% if (typeof error !== 'undefined' && error) { %>
+        <p class="login-error"><%= error %></p>
+      <% } %>
+      <label>Mật khẩu
+        <input type="password" name="password" required autofocus />
+      </label>
+      <button type="submit" class="btn btn-primary">Đăng nhập</button>
+    </form>
+  </main>
+</body>
+</html>

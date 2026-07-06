@@ -1,0 +1,217 @@
+{
+  "name": "2. Daily Sequence Runner (8h sáng mỗi ngày)",
+  "flow": [
+    {
+      "id": 1,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "parameters": {
+        "__IMTCONN__": {
+          "label": "Google Sheets (kết nối tài khoản của bạn)",
+          "data": {}
+        },
+        "spreadsheetId": "THAY_BANG_SPREADSHEET_ID_CUA_BAN",
+        "sheetId": "Contacts",
+        "filter": {
+          "conditions": [
+            [{ "a": "{{item.`Cot E - Trang thai`}}", "b": "active", "o": "text:equal" }]
+          ]
+        },
+        "limit": 500
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 0, "y": 0 }
+      }
+    },
+    {
+      "id": 2,
+      "module": "tools:Iterator",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "array": "{{1.rows}}"
+      },
+      "metadata": {
+        "designer": { "x": 300, "y": 0 }
+      }
+    },
+    {
+      "id": 3,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 600, "y": 0 }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": false },
+              "filter": {
+                "name": "Ngay 2 - Chua gui buoc 2",
+                "conditions": [
+                  [
+                    { "a": "{{2.`Cot F - Buoc sequence`}}", "b": "1", "o": "text:equal" },
+                    { "a": "{{dateDifference(now; parseDate(2.`Cot G - Ngay gui cuoi`; \"YYYY-MM-DD\"); \"days\")}}", "b": "1", "o": "number:greaterThanOrEqual" }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://api.resend.com/emails",
+                "method": "POST",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer THAY_BANG_RESEND_API_KEY" },
+                  { "name": "Content-Type", "value": "application/json" }
+                ],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\n  \"from\": \"Phong Menly <hello@DOMAIN_CUA_BAN.com>\",\n  \"to\": [\"{{2.`Cot A - Email`}}\"],\n  \"subject\": \"Câu chuyện thật của mình với AI...\",\n  \"html\": \"<p>Xin chào {{2.`Cot B - Ten`}},</p><p>Hôm qua mình hứa sẽ kể cho bạn nghe câu chuyện thật...</p><p>3 tháng trước mình cũng như bạn — không biết AI có thể kiếm tiền thật không.</p><p>Rồi mình thử 1 điều này và mọi thứ thay đổi...</p><p>[NỘI DUNG EMAIL NGÀY 2 - THÊM VÀO ĐÂY]</p><p>Phong Menly</p><p style='font-size:12px;color:#999;'><a href='https://DOMAIN_CUA_BAN.com/unsubscribe?email={{2.`Cot A - Email`}}'>Hủy đăng ký</a></p>\"\n}"
+              },
+              "metadata": { "designer": { "x": 900, "y": -150 } }
+            },
+            {
+              "id": 5,
+              "module": "google-sheets:updateRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": { "label": "Google Sheets", "data": {} },
+                "spreadsheetId": "THAY_BANG_SPREADSHEET_ID_CUA_BAN",
+                "sheetId": "Contacts"
+              },
+              "mapper": {
+                "rowNumber": "{{2.__ROW_NUMBER__}}",
+                "values": {
+                  "Cot F - Buoc sequence": "2",
+                  "Cot G - Ngay gui cuoi": "{{formatDate(now; \"YYYY-MM-DD\")}}"
+                }
+              },
+              "metadata": { "designer": { "x": 1200, "y": -150 } }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 6,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": false },
+              "filter": {
+                "name": "Ngay 4 - Chua gui buoc 3",
+                "conditions": [
+                  [
+                    { "a": "{{2.`Cot F - Buoc sequence`}}", "b": "2", "o": "text:equal" },
+                    { "a": "{{dateDifference(now; parseDate(2.`Cot G - Ngay gui cuoi`; \"YYYY-MM-DD\"); \"days\")}}", "b": "2", "o": "number:greaterThanOrEqual" }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://api.resend.com/emails",
+                "method": "POST",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer THAY_BANG_RESEND_API_KEY" },
+                  { "name": "Content-Type", "value": "application/json" }
+                ],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\n  \"from\": \"Phong Menly <hello@DOMAIN_CUA_BAN.com>\",\n  \"to\": [\"{{2.`Cot A - Email`}}\"],\n  \"subject\": \"Quick win: Làm điều này với AI trong 10 phút\",\n  \"html\": \"<p>Xin chào {{2.`Cot B - Ten`}},</p><p>Hôm nay mình tặng bạn 1 quick win có thể làm ngay trong 10 phút:</p><p>[NỘI DUNG EMAIL NGÀY 4 - QUICK WIN - THÊM VÀO ĐÂY]</p><p>Phong Menly</p><p style='font-size:12px;color:#999;'><a href='https://DOMAIN_CUA_BAN.com/unsubscribe?email={{2.`Cot A - Email`}}'>Hủy đăng ký</a></p>\"\n}"
+              },
+              "metadata": { "designer": { "x": 900, "y": 0 } }
+            },
+            {
+              "id": 7,
+              "module": "google-sheets:updateRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": { "label": "Google Sheets", "data": {} },
+                "spreadsheetId": "THAY_BANG_SPREADSHEET_ID_CUA_BAN",
+                "sheetId": "Contacts"
+              },
+              "mapper": {
+                "rowNumber": "{{2.__ROW_NUMBER__}}",
+                "values": {
+                  "Cot F - Buoc sequence": "3",
+                  "Cot G - Ngay gui cuoi": "{{formatDate(now; \"YYYY-MM-DD\")}}"
+                }
+              },
+              "metadata": { "designer": { "x": 1200, "y": 0 } }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 8,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": false },
+              "filter": {
+                "name": "Ngay 7 - Chua gui buoc 4",
+                "conditions": [
+                  [
+                    { "a": "{{2.`Cot F - Buoc sequence`}}", "b": "3", "o": "text:equal" },
+                    { "a": "{{dateDifference(now; parseDate(2.`Cot G - Ngay gui cuoi`; \"YYYY-MM-DD\"); \"days\")}}", "b": "3", "o": "number:greaterThanOrEqual" }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://api.resend.com/emails",
+                "method": "POST",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer THAY_BANG_RESEND_API_KEY" },
+                  { "name": "Content-Type", "value": "application/json" }
+                ],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\n  \"from\": \"Phong Menly <hello@DOMAIN_CUA_BAN.com>\",\n  \"to\": [\"{{2.`Cot A - Email`}}\"],\n  \"subject\": \"Mời bạn vào Workshop AI (100k thôi)\",\n  \"html\": \"<p>Xin chào {{2.`Cot B - Ten`}},</p><p>7 ngày qua mình đã chia sẻ với bạn khá nhiều về AI...</p><p>Nếu bạn muốn đi nhanh hơn, mình có 1 workshop thực chiến giá chỉ 100k:</p><p><a href='https://workshopaiagnet.lovable.app'>Đăng ký Workshop ngay →</a></p><p>Phong Menly</p><p style='font-size:12px;color:#999;'><a href='https://DOMAIN_CUA_BAN.com/unsubscribe?email={{2.`Cot A - Email`}}'>Hủy đăng ký</a></p>\"\n}"
+              },
+              "metadata": { "designer": { "x": 900, "y": 150 } }
+            },
+            {
+              "id": 9,
+              "module": "google-sheets:updateRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": { "label": "Google Sheets", "data": {} },
+                "spreadsheetId": "THAY_BANG_SPREADSHEET_ID_CUA_BAN",
+                "sheetId": "Contacts"
+              },
+              "mapper": {
+                "rowNumber": "{{2.__ROW_NUMBER__}}",
+                "values": {
+                  "Cot F - Buoc sequence": "4",
+                  "Cot E - Trang thai": "completed",
+                  "Cot G - Ngay gui cuoi": "{{formatDate(now; \"YYYY-MM-DD\")}}"
+                }
+              },
+              "metadata": { "designer": { "x": 1200, "y": 150 } }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": { "orphans": [] },
+    "zone": "eu2.make.com"
+  }
+}

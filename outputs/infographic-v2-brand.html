@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>GPT Image 2 + Seedance 2 — Phong Menly Brand</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1200px;
+    background: #F5F5F0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #111111;
+  }
+
+  .page {
+    width: 1200px;
+    padding: 52px 64px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid background subtle */
+  .deco-tr {
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    opacity: 0.05;
+    background-image:
+      linear-gradient(#111 1px, transparent 1px),
+      linear-gradient(90deg, #111 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .deco-bl {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 140px; height: 140px;
+    opacity: 0.04;
+    background-image:
+      linear-gradient(#111 1px, transparent 1px),
+      linear-gradient(90deg, #111 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* ── HEADER HOOK ── */
+  .header-section {
+    text-align: center;
+    margin-bottom: 44px;
+    position: relative;
+  }
+
+  /* Hook label tag */
+  .hook-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #111111;
+    color: #EFFF00;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 100px;
+    margin-bottom: 18px;
+  }
+  .hook-tag .dot {
+    width: 6px; height: 6px;
+    background: #EFFF00;
+    border-radius: 50%;
+    animation: blink 1.4s infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* MAIN HOOK — the content headline */
+  .main-hook {
+    font-size: 42px;
+    font-weight: 900;
+    color: #111111;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 14px;
+    max-width: 820px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .main-hook .hl {
+    background: #EFFF00;
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  /* Brand combo pills under hook */
+  .brand-combo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .brand-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFFFFF;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 100px;
+    padding: 7px 16px 7px 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .brand-pill .logo-wrap {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .brand-pill .logo-wrap.openai-bg { background: #111111; }
+  .brand-pill .logo-wrap.seedance-bg {
+    background: linear-gradient(135deg, #0057FF 0%, #00C2FF 100%);
+  }
+  .brand-pill .brand-label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #111111;
+    letter-spacing: 0.3px;
+  }
+  .combo-plus {
+    font-size: 22px;
+    font-weight: 900;
+    color: #EFFF00;
+    -webkit-text-stroke: 1px #bbc800;
+  }
+
+  /* ── MIDDLE GRID ── */
+  .middle {
+    display: grid;
+    grid-template-columns: 268px 1fr 268px;
+    gap: 0;
+    align-items: center;
+    margin-bottom: 32px;
+    min-height: 440px;
+  }
+
+  /* LEFT COLUMN */
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-right: 22px;
+  }
+
+  /* RIGHT COLUMN */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-left: 22px;
+  }
+
+  /* Agent cards */
+  .agent-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 16px;
+    padding: 20px 18px;
+    position: relative;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+  .agent-card .num-badge {
+    width: 28px; height: 28px;
+    background: #EFFF00;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #111111;
+    margin-bottom: 10px;
+  }
+  /* Brand logo in card top-right */
+  .card-brand-logo {
+    position: absolute;
+    top: 18px; right: 18px;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .card-brand-logo.openai { background: #111111; }
+  .card-brand-logo.seedance {
+    background: linear-gradient(135deg, #0057FF 0%, #00C2FF 100%);
+  }
+  .card-brand-logo.meta { background: #0866FF; }
+  .card-brand-logo.money { background: #22C55E; }
+
+  .agent-card .card-name {
+    font-size: 16px;
+    font-weight: 900;
+    color: #111111;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 7px;
+  }
+  .agent-card .card-body {
+    font-size: 12.5px;
+    color: #555555;
+    line-height: 1.6;
+  }
+  .agent-card .card-body .hi {
+    color: #111111;
+    font-weight: 700;
+    background: #EFFF00;
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+
+  /* Stat box */
+  .stat-box {
+    background: #EFFF00;
+    border-radius: 16px;
+    padding: 24px 20px;
+  }
+  .stat-box .big-num {
+    font-size: 54px;
+    font-weight: 900;
+    color: #111111;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 8px;
+    font-family: 'Arial Black', sans-serif;
+  }
+  .stat-box .stat-desc {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111111;
+    line-height: 1.5;
+  }
+  .stat-box .stat-source {
+    font-size: 10.5px;
+    color: #444444;
+    margin-top: 8px;
+  }
+
+  /* ── CENTER HUB ── */
+  .center-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 440px;
+  }
+  .arrows-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  .hub-ring {
+    width: 210px; height: 210px;
+    border-radius: 50%;
+    border: 2px dashed #CCCCCC;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+  .hub-core {
+    width: 174px; height: 174px;
+    border-radius: 50%;
+    background: #111111;
+    border: 3px solid #EFFF00;
+    box-shadow: 0 0 0 8px rgba(239,255,0,0.10), 0 0 28px rgba(239,255,0,0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+  }
+  /* Hub brand logos row */
+  .hub-logos {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hub-logo-badge {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .hub-logo-badge.openai { background: #EFFF00; }
+  .hub-logo-badge.seedance {
+    background: linear-gradient(135deg, #0057FF, #00C2FF);
+  }
+  .hub-plus {
+    font-size: 14px;
+    font-weight: 900;
+    color: #EFFF00;
+  }
+  .hub-name {
+    font-size: 11px;
+    font-weight: 900;
+    color: #EFFF00;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .hub-sub {
+    font-size: 9.5px;
+    color: #888;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* ── BOTTOM DISTRIBUTE CARD ── */
+  .distribute-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 32px;
+    margin-top: -18px;
+  }
+
+  /* ── FEATURES ROW ── */
+  .features-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+  .feat-pill {
+    background: #FFFFFF;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 14px;
+    padding: 16px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .feat-icon-wrap {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: #EFFF00;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .feat-text .feat-name {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #111111;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .feat-text .feat-desc {
+    font-size: 11px;
+    color: #888888;
+    line-height: 1.4;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 22px;
+    border-top: 1.5px solid #E0E0E0;
+  }
+  .footer-cta {
+    font-size: 13px;
+    color: #555;
+  }
+  .footer-cta strong {
+    background: #111111;
+    color: #EFFF00;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-dot-y {
+    width: 10px; height: 10px;
+    background: #EFFF00;
+    border-radius: 50%;
+    border: 2px solid #111111;
+  }
+  .brand-name-b {
+    font-size: 15px;
+    font-weight: 900;
+    color: #111111;
+    letter-spacing: 0.3px;
+  }
+  .brand-tag-b {
+    font-size: 10.5px;
+    color: #888;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="deco-tr"></div>
+  <div class="deco-bl"></div>
+
+  <!-- HEADER — HOOK IS THE TITLE -->
+  <div class="header-section">
+    <div class="hook-tag">
+      <span class="dot"></span>
+      Hệ thống kiếm tiền AI · 2025
+    </div>
+
+    <div class="main-hook">
+      Tôi tạo content mà không cần camera —<br>
+      đây là <span class="hl">hệ thống kiếm tiền</span> tôi đang dùng
+    </div>
+
+    <!-- Brand combo pills -->
+    <div class="brand-combo">
+      <!-- OpenAI / GPT Image 2 pill -->
+      <div class="brand-pill">
+        <div class="logo-wrap openai-bg">
+          <!-- OpenAI logo simplified SVG -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M22.28 9.53a5.84 5.84 0 0 0-.5-4.8 5.9 5.9 0 0 0-6.34-2.83A5.88 5.88 0 0 0 11 .5a5.9 5.9 0 0 0-5.62 4.08 5.88 5.88 0 0 0-3.93 2.85 5.92 5.92 0 0 0 .73 6.94 5.87 5.87 0 0 0 .5 4.8 5.9 5.9 0 0 0 6.34 2.83A5.87 5.87 0 0 0 13 23.5a5.91 5.91 0 0 0 5.63-4.09 5.87 5.87 0 0 0 3.92-2.84 5.92 5.92 0 0 0-.27-7.04zM13 21.94a4.37 4.37 0 0 1-2.8-1.02l.14-.08 4.65-2.68a.77.77 0 0 0 .39-.67V11.8l1.97 1.13a.07.07 0 0 1 .04.05v5.42A4.4 4.4 0 0 1 13 21.94zM3.54 18.01a4.38 4.38 0 0 1-.52-2.95l.13.08 4.65 2.68a.77.77 0 0 0 .77 0l5.67-3.27v2.26a.07.07 0 0 1-.03.06L9.5 19.6a4.4 4.4 0 0 1-5.96-1.59zm-1.4-9.63A4.37 4.37 0 0 1 4.42 6.2v5.5a.77.77 0 0 0 .38.67l5.67 3.27-1.97 1.13a.07.07 0 0 1-.07 0L3.7 14.04a4.4 4.4 0 0 1-.56-5.66zm16.18 3.77-5.67-3.27 1.97-1.13a.07.07 0 0 1 .07 0l4.73 2.73a4.39 4.39 0 0 1-.68 7.92v-5.5a.77.77 0 0 0-.42-.75zm1.96-2.97-.14-.08-4.64-2.7a.77.77 0 0 0-.77 0L9.06 9.67V7.41a.07.07 0 0 1 .03-.06l4.73-2.73a4.4 4.4 0 0 1 6.46 4.56zM8.07 12.88 6.1 11.75a.07.07 0 0 1-.04-.05V6.28a4.4 4.4 0 0 1 7.21-3.38l-.13.08-4.65 2.68a.77.77 0 0 0-.38.67l-.04 6.55zm1.07-2.3 2.52-1.46 2.52 1.45v2.9l-2.52 1.46-2.52-1.45v-2.9z" fill="#EFFF00"/>
+          </svg>
+        </div>
+        <span class="brand-label">GPT Image 2</span>
+      </div>
+
+      <span class="combo-plus">+</span>
+
+      <!-- Seedance 2 pill -->
+      <div class="brand-pill">
+        <div class="logo-wrap seedance-bg">
+          <!-- Seedance logo simplified — stylized S -->
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3C7.58 3 4 5.69 4 9c0 2.12 1.37 3.99 3.5 5.12L6 18h12l-1.5-3.88C18.63 12.99 20 11.12 20 9c0-3.31-3.58-6-8-6zm0 2c3.31 0 6 1.79 6 4s-2.69 4-6 4-6-1.79-6-4 2.69-4 6-4z" fill="white" opacity="0.9"/>
+            <circle cx="12" cy="9" r="2" fill="white"/>
+          </svg>
+        </div>
+        <span class="brand-label">Seedance 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE 3-COL GRID -->
+  <div class="middle">
+
+    <!-- LEFT -->
+    <div class="left-col">
+      <!-- Card 1: Create with OpenAI logo -->
+      <div class="agent-card">
+        <div class="num-badge">1</div>
+        <div class="card-brand-logo openai">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M22.28 9.53a5.84 5.84 0 0 0-.5-4.8 5.9 5.9 0 0 0-6.34-2.83A5.88 5.88 0 0 0 11 .5a5.9 5.9 0 0 0-5.62 4.08 5.88 5.88 0 0 0-3.93 2.85 5.92 5.92 0 0 0 .73 6.94 5.87 5.87 0 0 0 .5 4.8 5.9 5.9 0 0 0 6.34 2.83A5.87 5.87 0 0 0 13 23.5a5.91 5.91 0 0 0 5.63-4.09 5.87 5.87 0 0 0 3.92-2.84 5.92 5.92 0 0 0-.27-7.04zM13 21.94a4.37 4.37 0 0 1-2.8-1.02l.14-.08 4.65-2.68a.77.77 0 0 0 .39-.67V11.8l1.97 1.13a.07.07 0 0 1 .04.05v5.42A4.4 4.4 0 0 1 13 21.94zM3.54 18.01a4.38 4.38 0 0 1-.52-2.95l.13.08 4.65 2.68a.77.77 0 0 0 .77 0l5.67-3.27v2.26a.07.07 0 0 1-.03.06L9.5 19.6a4.4 4.4 0 0 1-5.96-1.59zm-1.4-9.63A4.37 4.37 0 0 1 4.42 6.2v5.5a.77.77 0 0 0 .38.67l5.67 3.27-1.97 1.13a.07.07 0 0 1-.07 0L3.7 14.04a4.4 4.4 0 0 1-.56-5.66zm16.18 3.77-5.67-3.27 1.97-1.13a.07.07 0 0 1 .07 0l4.73 2.73a4.39 4.39 0 0 1-.68 7.92v-5.5a.77.77 0 0 0-.42-.75zm1.96-2.97-.14-.08-4.64-2.7a.77.77 0 0 0-.77 0L9.06 9.67V7.41a.07.07 0 0 1 .03-.06l4.73-2.73a4.4 4.4 0 0 1 6.46 4.56zM8.07 12.88 6.1 11.75a.07.07 0 0 1-.04-.05V6.28a4.4 4.4 0 0 1 7.21-3.38l-.13.08-4.65 2.68a.77.77 0 0 0-.38.67l-.04 6.55zm1.07-2.3 2.52-1.46 2.52 1.45v2.9l-2.52 1.46-2.52-1.45v-2.9z" fill="white"/>
+          </svg>
+        </div>
+        <div class="card-name">Create</div>
+        <div class="card-body">
+          GPT Image 2 tạo ảnh <span class="hi">chuyên nghiệp</span> trong 5 phút. Không cần studio, không cần photographer.
+        </div>
+      </div>
+
+      <div class="stat-box">
+        <div class="big-num">89%</div>
+        <div class="stat-desc">người dùng AI không có hệ thống kiếm tiền rõ ràng</div>
+        <div class="stat-source">Nguồn: Phong Menly Survey 2025</div>
+      </div>
+    </div>
+
+    <!-- CENTER HUB -->
+    <div class="center-col">
+      <svg class="arrows-svg" viewBox="0 0 440 440" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 95 115 Q 195 175 205 215" stroke="#EFFF00" stroke-width="2.5" marker-end="url(#arr)"/>
+        <path d="M 235 215 Q 280 175 340 115" stroke="#EFFF00" stroke-width="2.5" marker-end="url(#arr)"/>
+        <path d="M 205 255 Q 180 305 95 340" stroke="#EFFF00" stroke-width="2.5" marker-end="url(#arr)"/>
+        <path d="M 340 340 Q 295 305 238 258" stroke="#EFFF00" stroke-width="2.5" marker-end="url(#arr)"/>
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#EFFF00"/>
+          </marker>
+        </defs>
+      </svg>
+
+      <div class="hub-ring">
+        <div class="hub-core">
+          <!-- Both brand logos in hub -->
+          <div class="hub-logos">
+            <div class="hub-logo-badge openai">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M22.28 9.53a5.84 5.84 0 0 0-.5-4.8 5.9 5.9 0 0 0-6.34-2.83A5.88 5.88 0 0 0 11 .5a5.9 5.9 0 0 0-5.62 4.08 5.88 5.88 0 0 0-3.93 2.85 5.92 5.92 0 0 0 .73 6.94 5.87 5.87 0 0 0 .5 4.8 5.9 5.9 0 0 0 6.34 2.83A5.87 5.87 0 0 0 13 23.5a5.91 5.91 0 0 0 5.63-4.09 5.87 5.87 0 0 0 3.92-2.84 5.92 5.92 0 0 0-.27-7.04zM13 21.94a4.37 4.37 0 0 1-2.8-1.02l.14-.08 4.65-2.68a.77.77 0 0 0 .39-.67V11.8l1.97 1.13a.07.07 0 0 1 .04.05v5.42A4.4 4.4 0 0 1 13 21.94zM3.54 18.01a4.38 4.38 0 0 1-.52-2.95l.13.08 4.65 2.68a.77.77 0 0 0 .77 0l5.67-3.27v2.26a.07.07 0 0 1-.03.06L9.5 19.6a4.4 4.4 0 0 1-5.96-1.59zm-1.4-9.63A4.37 4.37 0 0 1 4.42 6.2v5.5a.77.77 0 0 0 .38.67l5.67 3.27-1.97 1.13a.07.07 0 0 1-.07 0L3.7 14.04a4.4 4.4 0 0 1-.56-5.66zm16.18 3.77-5.67-3.27 1.97-1.13a.07.07 0 0 1 .07 0l4.73 2.73a4.39 4.39 0 0 1-.68 7.92v-5.5a.77.77 0 0 0-.42-.75zm1.96-2.97-.14-.08-4.64-2.7a.77.77 0 0 0-.77 0L9.06 9.67V7.41a.07.07 0 0 1 .03-.06l4.73-2.73a4.4 4.4 0 0 1 6.46 4.56zM8.07 12.88 6.1 11.75a.07.07 0 0 1-.04-.05V6.28a4.4 4.4 0 0 1 7.21-3.38l-.13.08-4.65 2.68a.77.77 0 0 0-.38.67l-.04 6.55zm1.07-2.3 2.52-1.46 2.52 1.45v2.9l-2.52 1.46-2.52-1.45v-2.9z" fill="#111111"/>
+              </svg>
+            </div>
+            <span class="hub-plus">+</span>
+            <div class="hub-logo-badge seedance">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 8.5C5 6.01 7.24 4 10 4c1.8 0 3.38.87 4.32 2.2L16 5c-1.3-1.84-3.41-3-5.75-3C6.13 2 3 4.91 3 8.5c0 2.04 1 3.85 2.56 5.02L4 15h10l-2-3.5C13.27 11.1 14 9.87 14 8.5" fill="white" opacity="0.85"/>
+                <circle cx="14" cy="17" r="3" fill="white"/>
+              </svg>
+            </div>
+          </div>
+          <div class="hub-name">AI Content<br>System</div>
+          <div class="hub-sub">Tạo ảnh · Animate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+      <!-- Card 2: Animate with Seedance logo -->
+      <div class="agent-card">
+        <div class="num-badge">2</div>
+        <div class="card-brand-logo seedance">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C8.13 2 5 4.69 5 8c0 1.85.9 3.51 2.33 4.64L5.5 17h13l-1.83-4.36C18.1 11.51 19 9.85 19 8c0-3.31-3.13-6-7-6zm0 2c2.76 0 5 1.79 5 4 0 1.3-.72 2.47-1.84 3.22L14 13H10l-.16-1.78C8.72 10.47 8 9.3 8 8c0-2.21 1.79-4 4-4z" fill="white"/>
+            <rect x="9" y="18" width="6" height="2" rx="1" fill="white"/>
+            <rect x="10.5" y="21" width="3" height="1.5" rx="0.75" fill="white"/>
+          </svg>
+        </div>
+        <div class="card-name">Animate</div>
+        <div class="card-body">
+          Seedance 2 biến ảnh tĩnh thành <span class="hi">video động</span>. Clip 5–15 giây trông như quay thật.
+        </div>
+      </div>
+
+      <!-- Card 4: Monetize -->
+      <div class="agent-card">
+        <div class="num-badge">4</div>
+        <div class="card-brand-logo money">
+          <!-- Money/Dollar SVG -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.93V18h-2v-1.07C9.39 16.57 8 15.41 8 14h2c0 .76.9 1.33 2 1.33 1.1 0 2-.57 2-1.33 0-.74-.65-1.05-2.28-1.46C9.97 12.09 8 11.5 8 9.67 8 8.24 9.39 7.07 11 6.75V6h2v.75C14.61 7.07 16 8.23 16 9.67h-2c0-.76-.9-1.33-2-1.33-1.1 0-2 .57-2 1.33 0 .71.64 1.02 2.25 1.44 2.02.5 3.75 1.13 3.75 2.89-.01 1.51-1.39 2.68-3 2.93z" fill="white"/>
+          </svg>
+        </div>
+        <div class="card-name">Monetize</div>
+        <div class="card-body">
+          Affiliate · Dịch vụ ảnh AI · Sponsored · Khóa học. <span class="hi">Nhiều luồng thu nhập</span> từ 1 hệ thống.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DISTRIBUTE CARD — centered below hub -->
+  <div class="distribute-wrap">
+    <div class="agent-card" style="width:340px; text-align:center; padding:18px 26px;">
+      <div style="display:flex; justify-content:center; margin-bottom:9px;">
+        <div class="num-badge">3</div>
+      </div>
+      <!-- Platform logos row -->
+      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+        <!-- Facebook -->
+        <div style="width:28px;height:28px;border-radius:50%;background:#1877F2;display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.88v2.27h3.32l-.53 3.49h-2.79V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+        </div>
+        <!-- Instagram -->
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </div>
+        <!-- LinkedIn -->
+        <div style="width:28px;height:28px;border-radius:50%;background:#0A66C2;display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </div>
+        <!-- X/Twitter -->
+        <div style="width:28px;height:28px;border-radius:50%;background:#111111;display:flex;align-items:center;justify-content:center;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div>
+        <!-- TikTok -->
+        <div style="width:28px;height:28px;border-radius:50%;background:#111111;display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z"/></svg>
+        </div>
+        <!-- YouTube -->
+        <div style="width:28px;height:28px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+        </div>
+      </div>
+      <div class="card-name">Distribute</div>
+      <div class="card-body">
+        1 lần tạo → đăng <span class="hi">6 nền tảng</span> cùng lúc<br>
+        Facebook · Instagram · LinkedIn · X · TikTok · YouTube
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES ROW -->
+  <div class="features-row">
+    <div class="feat-pill">
+      <div class="feat-icon-wrap">⚡</div>
+      <div class="feat-text">
+        <div class="feat-name">Tự động hóa</div>
+        <div class="feat-desc">Sản xuất content 24/7 không cần ngồi chờ</div>
+      </div>
+    </div>
+    <div class="feat-pill">
+      <div class="feat-icon-wrap">🎨</div>
+      <div class="feat-text">
+        <div class="feat-name">Thiết kế AI</div>
+        <div class="feat-desc">Ảnh chuẩn studio, video chuyên nghiệp</div>
+      </div>
+    </div>
+    <div class="feat-pill">
+      <div class="feat-icon-wrap">📈</div>
+      <div class="feat-text">
+        <div class="feat-name">Scale vô hạn</div>
+        <div class="feat-desc">Tăng output gấp 10x, chi phí gần như 0</div>
+      </div>
+    </div>
+    <div class="feat-pill">
+      <div class="feat-icon-wrap">🔗</div>
+      <div class="feat-text">
+        <div class="feat-name">Affiliate Ready</div>
+        <div class="feat-desc">Tích hợp link kiếm tiền vào mọi content</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-cta">
+      Comment <strong>"IMAGE"</strong> để nhận bộ prompt GPT Image 2 mình đang dùng 👇
+    </div>
+    <div class="footer-brand">
+      <div class="brand-dot-y"></div>
+      <div>
+        <div class="brand-name-b">Phong Menly</div>
+        <div class="brand-tag-b">KOL AI · Thực chiến · Go Global</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,95 @@
+{
+  "name": "3. Broadcast - Gửi email hàng loạt",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": "WEBHOOK_ID_TU_DONG_TAO_SAU_KHI_IMPORT",
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 0, "y": 0 },
+        "restore": {
+          "parameters": {
+            "hook": { "label": "Broadcast Trigger Webhook" }
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "parameters": {
+        "__IMTCONN__": {
+          "label": "Google Sheets (kết nối tài khoản của bạn)",
+          "data": {}
+        },
+        "spreadsheetId": "THAY_BANG_SPREADSHEET_ID_CUA_BAN",
+        "sheetId": "Contacts",
+        "filter": {
+          "conditions": [
+            [{ "a": "{{item.`Cot E - Trang thai`}}", "b": "unsubscribed", "o": "text:notEqual" }]
+          ]
+        },
+        "limit": 1000
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 300, "y": 0 }
+      }
+    },
+    {
+      "id": 3,
+      "module": "tools:Iterator",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "array": "{{2.rows}}"
+      },
+      "metadata": {
+        "designer": { "x": 600, "y": 0 }
+      }
+    },
+    {
+      "id": 4,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": { "handleErrors": false },
+      "mapper": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "headers": [
+          { "name": "Authorization", "value": "Bearer THAY_BANG_RESEND_API_KEY" },
+          { "name": "Content-Type", "value": "application/json" }
+        ],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": "{\n  \"from\": \"Phong Menly <hello@DOMAIN_CUA_BAN.com>\",\n  \"to\": [\"{{3.`Cot A - Email`}}\"],\n  \"subject\": \"{{1.subject}}\",\n  \"html\": \"{{1.html_content}}\"\n}"
+      },
+      "metadata": {
+        "designer": { "x": 900, "y": 0 }
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": { "orphans": [] },
+    "zone": "eu2.make.com"
+  }
+}

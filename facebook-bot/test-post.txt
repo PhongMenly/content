@@ -1,0 +1,3 @@
+Test hệ thống đăng bài tự động qua API.
+
+Bài này sẽ được xóa ngay sau khi kiểm tra xong, mọi người bỏ qua giúp mình nhé.

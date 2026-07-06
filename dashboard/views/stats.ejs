@@ -1,0 +1,30 @@
+<%- include('partials/header', { pageTitle: 'Thống kê', active: 'stats' }) %>
+
+<div class="toolbar">
+  <h2>Hiệu quả bài viết đã đăng</h2>
+  <button id="refresh-stats-btn" class="btn btn-primary">Làm mới số liệu</button>
+</div>
+
+<div id="stats-summary" class="stats-summary"></div>
+
+<div id="stats-table-wrap">
+  <table class="stats-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Bài viết</th>
+        <th>Pillar</th>
+        <th>Ngày đăng</th>
+        <th>Thích</th>
+        <th>Bình luận</th>
+        <th>Chia sẻ</th>
+        <th>Tổng tương tác</th>
+      </tr>
+    </thead>
+    <tbody id="stats-tbody">
+      <tr><td colspan="8" style="color:#555">Đang tải...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

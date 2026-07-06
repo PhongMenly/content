@@ -1,0 +1,19 @@
+{
+  "name": "phong-menly-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard quan ly noi dung, lich dang bai va credit AI cho Phong Menly",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node scripts/migrate-posts.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.5.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.1",
+    "multer": "^2.2.0"
+  }
+}

@@ -1,0 +1,30 @@
+<%- include('partials/header', { pageTitle: 'Lịch đăng bài', active: 'calendar' }) %>
+
+<div class="toolbar">
+  <h2>Các bài đã lên lịch — bấm vào bài để xem chi tiết</h2>
+</div>
+<div id="calendar"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    const res = await fetch('/api/schedule');
+    const posts = await res.json();
+    const events = posts.map((p) => ({
+      title: p.title || p.slug,
+      start: new Date(p.scheduled_time * 1000).toISOString(),
+      url: '/posts/' + p.id,
+    }));
+
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'vi',
+      height: 'auto',
+      events,
+    });
+    calendar.render();
+  });
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Content Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 40px; background: #e5e7eb; color: #111111; }
+        .header { max-width: 1400px; margin: 0 auto 30px auto; display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 30px; max-width: 1400px; margin: 0 auto; }
+        
+        .card { background: #ffffff; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025); overflow: hidden; display: flex; flex-direction: column; border: 1px solid #f3f4f6; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        
+        .card-header { padding: 16px 24px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+        .post-id { font-weight: 700; color: #9ca3af; font-size: 15px; letter-spacing: 1px; }
+        .copy-btn { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.15s; }
+        .copy-btn:hover { background: #f9fafb; border-color: #d1d5db; color: #111; }
+        .copy-btn:active { transform: scale(0.97); }
+        
+        .card-image { width: 100%; height: auto; max-height: 280px; object-fit: cover; border-bottom: 1px solid #f3f4f6; }
+        
+        .card-body { padding: 24px; flex-grow: 1; max-height: 450px; overflow-y: auto; scrollbar-width: thin; }
+        .card-body::-webkit-scrollbar { width: 6px; }
+        .card-body::-webkit-scrollbar-track { background: transparent; }
+        .card-body::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 10px; }
+        
+        .card-title { margin: 0 0 16px 0; font-size: 20px; font-weight: 700; line-height: 1.4; color: #111827; }
+        .card-text { color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0; white-space: pre-wrap; font-family: inherit; }
+        
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Content Dashboard</h1>
+        <p style="font-weight: 500; color: #6b7280; font-size: 15px;">Tổng số: <span style="color: #111; font-weight: 700;">2 bài viết</span></p>
+    </div>
+    <div class="grid">
+
+        <div class="card">
+            <div class="card-header">
+                <span class="post-id">#002</span>
+                <button class="copy-btn" onclick="const text = `Claude Agent Mode — Hầu hết người dùng đang bỏ lỡ tính năng mạnh nhất\n\nHầu hết người dùng Claude đang bỏ lỡ tính năng mạnh nhất của nó.\n\nKhông phải khả năng viết.\nKhông phải code.\nMà là Agent Mode — chế độ mà Claude tự lên kế hoạch, tự thực thi từng bước, và tự báo cáo kết quả.\n\nHãy xem sự khác biệt:\n\nClaude thông thường:\nBạn hỏi -> Claude trả lời -> Bạn làm tiếp.\n\nClaude Agent:\nBạn giao task -> Claude tự phân tích -> Tự gọi tool -> Tự kiểm tra kết quả -> Báo cáo lại khi xong.\n\nMình đang dùng Claude Agent để xử lý cả chuỗi công việc mà trước đây mất cả buổi sáng:\n\n- Đọc và tóm tắt 20 email khách hàng\n- Phân loại theo mức độ ưu tiên\n- Soạn phản hồi cho từng loại\n- Lưu vào đúng folder\n\nBây giờ? 15 phút. Không cần mình ngồi.\n\n3 điều cần biết khi dùng Claude Agent:\n\n1. Giao task rõ — không giao câu hỏi\nSai: Giúp mình với email khách hàng\nĐúng: Đọc 20 email này, phân loại thành 3 nhóm: khẩn cấp / bình thường / có thể bỏ qua, sau đó soạn phản hồi mẫu cho từng nhóm\n\n2. Cho Agent biết ngữ cảnh của bạn\nAgent làm việc tốt khi nó hiểu bạn là ai, bạn bán gì, tone bạn muốn dùng. Đầu tư 5 phút viết context -> Agent làm chuẩn ngay lần đầu.\n\n3. Luôn có Human-in-the-Loop cho task quan trọng\nAgent mạnh — nhưng vẫn cần bạn duyệt trước khi nó làm các việc không thể hoàn tác (gửi email, xóa file, post lên MXH).\n\nBài học này mình học từ vụ gửi nhầm email cho 47 khách hàng. Tốn cả buổi chiều ngồi xin lỗi từng người.\n\nClaude Agent không phải tương lai.\nNó là thứ bạn có thể dùng ngay hôm nay để lấy lại vài tiếng mỗi ngày.\n\nBạn đang dùng Claude như chatbot hay như Agent?\nChia sẻ mình biết với nhé 👇`; navigator.clipboard.writeText(text); const btn=this; const originalText=btn.innerHTML; btn.innerHTML='<span style=\'color:#10b981;\'>✓ Copied!</span>'; setTimeout(()=>btn.innerHTML=originalText, 2000);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+            </div>
+            
+            <div class="card-body">
+                <h2 class="card-title">Claude Agent Mode — Hầu hết người dùng đang bỏ lỡ tính năng mạnh nhất</h2>
+                <div class="card-text">Hầu hết người dùng Claude đang bỏ lỡ tính năng mạnh nhất của nó.
+
+Không phải khả năng viết.
+Không phải code.
+Mà là Agent Mode — chế độ mà Claude tự lên kế hoạch, tự thực thi từng bước, và tự báo cáo kết quả.
+
+Hãy xem sự khác biệt:
+
+Claude thông thường:
+Bạn hỏi -> Claude trả lời -> Bạn làm tiếp.
+
+Claude Agent:
+Bạn giao task -> Claude tự phân tích -> Tự gọi tool -> Tự kiểm tra kết quả -> Báo cáo lại khi xong.
+
+Mình đang dùng Claude Agent để xử lý cả chuỗi công việc mà trước đây mất cả buổi sáng:
+
+- Đọc và tóm tắt 20 email khách hàng
+- Phân loại theo mức độ ưu tiên
+- Soạn phản hồi cho từng loại
+- Lưu vào đúng folder
+
+Bây giờ? 15 phút. Không cần mình ngồi.
+
+3 điều cần biết khi dùng Claude Agent:
+
+1. Giao task rõ — không giao câu hỏi
+Sai: "Giúp mình với email khách hàng"
+Đúng: "Đọc 20 email này, phân loại thành 3 nhóm: khẩn cấp / bình thường / có thể bỏ qua, sau đó soạn phản hồi mẫu cho từng nhóm"
+
+2. Cho Agent biết ngữ cảnh của bạn
+Agent làm việc tốt khi nó hiểu bạn là ai, bạn bán gì, tone bạn muốn dùng. Đầu tư 5 phút viết context -> Agent làm chuẩn ngay lần đầu.
+
+3. Luôn có Human-in-the-Loop cho task quan trọng
+Agent mạnh — nhưng vẫn cần bạn duyệt trước khi nó làm các việc không thể hoàn tác (gửi email, xóa file, post lên MXH).
+
+Bài học này mình học từ vụ gửi nhầm email cho 47 khách hàng. Tốn cả buổi chiều ngồi xin lỗi từng người.
+
+Claude Agent không phải tương lai.
+
+Nó là thứ bạn có thể dùng ngay hôm nay để lấy lại vài tiếng mỗi ngày.
+
+Bạn đang dùng Claude như chatbot hay như Agent?
+Chia sẻ mình biết với nhé 👇</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="post-id">#001</span>
+                <button class="copy-btn" onclick="const text = `Tại sao bạn cần xây dựng quy trình AI ngay hôm nay?\n\nNhiều người nghĩ AI chỉ để viết content cho nhanh.\nThực tế, AI là để giải phóng bạn khỏi các công việc lặp đi lặp lại.\n\nLợi ích:\n- X3 hiệu suất làm việc\n- Tiết kiệm chi phí thuê nhân sự\n- Content đều đặn mỗi ngày\n\nHành động ngay: Bắt đầu bằng 1 prompt đơn giản nhất!`; navigator.clipboard.writeText(text); const btn=this; const originalText=btn.innerHTML; btn.innerHTML='<span style=\'color:#10b981;\'>✓ Copied!</span>'; setTimeout(()=>btn.innerHTML=originalText, 2000);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+            </div>
+            
+            <div class="card-body">
+                <h2 class="card-title">Tại sao bạn cần xây dựng quy trình AI ngay hôm nay?</h2>
+                <div class="card-text">Nhiều người nghĩ AI chỉ để viết content cho nhanh.
+Thực tế, AI là để giải phóng bạn khỏi các công việc lặp đi lặp lại.
+
+Lợi ích:
+- X3 hiệu suất làm việc
+- Tiết kiệm chi phí thuê nhân sự
+- Content đều đặn mỗi ngày
+
+Hành động ngay: Bắt đầu bằng 1 prompt đơn giản nhất!</div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

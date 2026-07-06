@@ -1,0 +1,14 @@
+{
+  "name": "phong-menly-facebook-poster",
+  "version": "1.0.0",
+  "description": "Dang bai / len lich dang Facebook Page qua Graph API",
+  "main": "post-cli.js",
+  "scripts": {
+    "post": "node post-cli.js",
+    "setup-token": "node token-setup.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "puppeteer-core": "^25.3.0"
+  }
+}

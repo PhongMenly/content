@@ -1,0 +1,80 @@
+{
+  "updated": "2026-05-02",
+  "source": "Notion - Trang quản lý Link Affiliate Sản Phẩm Win",
+  "tools": [
+    {
+      "id": 1,
+      "name": "Whop",
+      "category": "Marketplace / Platform",
+      "link": "https://whop.com/?a=phongtyphu"
+    },
+    {
+      "id": 2,
+      "name": "PitPit",
+      "category": "AI Content Creator",
+      "link": "https://pippitcreator.pxf.io/Gb0Ngm"
+    },
+    {
+      "id": 3,
+      "name": "Topview AI",
+      "category": "AI Video Creator",
+      "link": "https://www.topview.ai/?via=KOLAI"
+    },
+    {
+      "id": 4,
+      "name": "iMobie",
+      "category": "Mobile Tool",
+      "link": "https://imobie.sjv.io/c/6826320/2231409/10066"
+    },
+    {
+      "id": 5,
+      "name": "Higgsfield",
+      "category": "AI Video Generator",
+      "link": "https://higgsfield.ai/?fpr=twt6ij"
+    },
+    {
+      "id": 6,
+      "name": "BASE44",
+      "category": "AI Vibe Coding / Build App",
+      "link": "https://base44.pxf.io/c/7117685/2049275/25619?trafcat=base"
+    },
+    {
+      "id": 7,
+      "name": "ElevenLabs",
+      "category": "AI Voice / Audio",
+      "commission": "20%",
+      "link": "https://try.elevenlabs.io/3s2obuawcuj7"
+    },
+    {
+      "id": 8,
+      "name": "OpenArt",
+      "category": "AI Image Generator",
+      "link": "https://openart.ai/home/?via=phong"
+    },
+    {
+      "id": 9,
+      "name": "HeyGen",
+      "category": "AI Avatar Video",
+      "link": "https://www.heygen.com/?sid=rewardful&utm_content=creator&utm_medium=affiliate&via=phongpml"
+    },
+    {
+      "id": 10,
+      "name": "Beacons (Biolink)",
+      "category": "Bio Link / Landing Page",
+      "link": "https://beacons.ai/signup?c=phongmenly"
+    },
+    {
+      "id": 11,
+      "name": "Lovable",
+      "category": "AI Vibe Coding / Build App",
+      "link": "https://lovable.dev/?via=phong"
+    },
+    {
+      "id": 12,
+      "name": "Jogg AI",
+      "category": "AI Video / Content",
+      "commission": "30%",
+      "link": "https://www.jogg.ai/?fpr=phongmenly"
+    }
+  ]
+}

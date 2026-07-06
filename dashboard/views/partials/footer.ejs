@@ -1,0 +1,21 @@
+      </main>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var toggle = document.getElementById("menu-toggle");
+      var sidebar = document.getElementById("sidebar");
+      var backdrop = document.getElementById("sidebar-backdrop");
+      if (toggle) {
+        toggle.addEventListener("click", function () { sidebar.classList.toggle("open"); backdrop.classList.toggle("show"); });
+        backdrop.addEventListener("click", function () { sidebar.classList.remove("open"); backdrop.classList.remove("show"); });
+      }
+      var dateEl = document.getElementById("topbar-date");
+      if (dateEl) {
+        dateEl.textContent = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" });
+      }
+    })();
+  </script>
+  <script src="/app.js"></script>
+</body>
+</html>
