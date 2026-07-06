@@ -197,6 +197,19 @@ async function removeLibraryImage(id) {
   return rows[0] || null;
 }
 
+async function getKv(key, defaultValue = null) {
+  const rows = await sql.query("SELECT value FROM bot_kv WHERE key = $1", [key]);
+  return rows[0] ? rows[0].value : defaultValue;
+}
+
+async function setKv(key, value) {
+  await sql.query(
+    `INSERT INTO bot_kv (key, value, updated_at) VALUES ($1, $2, $3)
+     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = $3`,
+    [key, JSON.stringify(value), now()]
+  );
+}
+
 async function deletePost(id) {
   await sql.query("DELETE FROM post_history WHERE post_id = $1", [id]);
   const rows = await sql.query("DELETE FROM posts WHERE id = $1 RETURNING *", [id]);
@@ -209,6 +222,8 @@ module.exports = {
   addLibraryImage,
   listLibraryImages,
   removeLibraryImage,
+  getKv,
+  setKv,
   listPosts,
   listPostedPosts,
   getPost,

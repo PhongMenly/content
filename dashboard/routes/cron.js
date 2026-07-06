@@ -1,6 +1,11 @@
 const express = require("express");
 const db = require("../db/client");
 const { postText, postPhoto, getPostInsights } = require("../lib/facebook");
+const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
+const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
+const { generateReport } = require("../lib/telegram/insights");
+
+const OWNER_CHAT_ID = 8481163556;
 
 const router = express.Router();
 
@@ -50,6 +55,31 @@ router.get("/sync-metrics", checkCronAuth, async (req, res) => {
   }
 
   res.json({ processed: results.length, results });
+});
+
+router.get("/telegram-review-check", checkCronAuth, async (req, res) => {
+  try {
+    const draftsSent = await checkForNewDrafts({
+      sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+      sendPhoto: (url, caption) => sendPhoto(OWNER_CHAT_ID, url, caption),
+    });
+    const resultsSent = await checkForPostResults({
+      sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+    });
+    res.json({ draftsSent, resultsSent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/telegram-daily-report", checkCronAuth, async (req, res) => {
+  try {
+    const report = await generateReport();
+    await sendMessage(OWNER_CHAT_ID, "BAO CAO INSIGHTS HANG NGAY TU NHI:\n\n" + report);
+    res.json({ sent: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

@@ -13,6 +13,7 @@ const libraryRouter = require("./routes/library");
 const cronRouter = require("./routes/cron");
 const statsRouter = require("./routes/stats");
 const settingsRouter = require("./routes/settings");
+const telegramRouter = require("./routes/telegram");
 
 const app = express();
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 4000;
@@ -28,6 +29,7 @@ app.get("/login", (req, res) => res.render("login", { error: null }));
 app.post("/login", login);
 app.post("/logout", logout);
 app.use("/api/cron", cronRouter);
+app.use("/api/telegram", telegramRouter);
 
 app.use(requireAuth);
 

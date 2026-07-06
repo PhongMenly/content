@@ -3,6 +3,8 @@
   "maxPerRun": 5,
   "delaySecondsMin": 45,
   "delaySecondsMax": 90,
+  "autoShareAfterPost": false,
+  "shareDelayMinutes": 20,
   "groups": [
   ]
 }

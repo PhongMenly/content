@@ -20,7 +20,7 @@ router.get("/groups", (req, res) => {
 });
 
 router.put("/groups", (req, res) => {
-  const { groups, maxPerRun } = req.body;
+  const { groups, maxPerRun, autoShareAfterPost, shareDelayMinutes } = req.body;
   const config = readGroupsConfig();
   if (Array.isArray(groups)) {
     config.groups = groups
@@ -28,6 +28,8 @@ router.put("/groups", (req, res) => {
       .filter((g) => /^https:\/\/(www\.)?facebook\.com\/groups\//.test(g));
   }
   if (maxPerRun) config.maxPerRun = Math.min(Math.max(parseInt(maxPerRun, 10) || 5, 1), 10);
+  if (autoShareAfterPost !== undefined) config.autoShareAfterPost = autoShareAfterPost === true;
+  if (shareDelayMinutes) config.shareDelayMinutes = Math.min(Math.max(parseInt(shareDelayMinutes, 10) || 20, 5), 120);
   fs.writeFileSync(GROUPS_FILE, JSON.stringify(config, null, 2), "utf-8");
   res.json({ ok: true, saved: config.groups.length });
 });

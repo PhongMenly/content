@@ -7,7 +7,12 @@
  * Chay bang pm2 (xem ecosystem.config.js).
  */
 require("dotenv").config({ path: require("path").join(__dirname, ".env.local") });
+const fs = require("fs");
+const path = require("path");
+const { spawn } = require("child_process");
 const { runBackup } = require("./scripts/backup-db");
+
+const FB_BOT_DIR = path.join(__dirname, "..", "facebook-bot");
 
 const BASE = process.env.CRON_TARGET_URL || "http://localhost:4000";
 const SECRET = process.env.CRON_SECRET;
@@ -40,12 +45,58 @@ async function call(pathname) {
   return data;
 }
 
+// Sau khi bai len Page thanh cong: cho X phut roi tu chia se vao cac group (neu da bat trong Cai dat)
+function scheduleGroupShare(postId) {
+  try {
+    const groupsFile = path.join(FB_BOT_DIR, "groups.json");
+    if (!fs.existsSync(groupsFile)) return;
+    const config = JSON.parse(fs.readFileSync(groupsFile, "utf-8"));
+    const ready =
+      config.autoShareAfterPost === true &&
+      (config.groups || []).length > 0 &&
+      fs.existsSync(path.join(FB_BOT_DIR, ".browser-profile"));
+    if (!ready) return;
+
+    const delayMs = (config.shareDelayMinutes || 20) * 60 * 1000;
+    log(`Bai #${postId}: se tu chia se vao ${config.groups.length} group sau ${config.shareDelayMinutes || 20} phut`);
+
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`${BASE}/api/posts/${postId}`, {
+          headers: { Authorization: `Bearer ${process.env.API_TOKEN}` },
+        });
+        const post = await res.json();
+        if (!post || !post.body) return;
+
+        const logsDir = path.join(FB_BOT_DIR, "logs");
+        if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+        const messageFile = path.join(logsDir, `share-message-${postId}.txt`);
+        fs.writeFileSync(messageFile, post.body, "utf-8");
+
+        const runLog = fs.openSync(path.join(logsDir, `share-run-${postId}-${Date.now()}.log`), "a");
+        const child = spawn(process.execPath, ["share-groups.js", "--message-file", messageFile], {
+          cwd: FB_BOT_DIR,
+          detached: true,
+          stdio: ["ignore", runLog, runLog],
+        });
+        child.unref();
+        await notifyTelegram(`Bat dau tu chia se bai #${postId} vao ${Math.min(config.groups.length, config.maxPerRun || 5)} group...`);
+      } catch (err) {
+        log(`Tu chia se group LOI: ${err.message}`);
+      }
+    }, delayMs);
+  } catch (err) {
+    log(`scheduleGroupShare LOI: ${err.message}`);
+  }
+}
+
 async function autoPost() {
   try {
     const data = await call("/api/cron/auto-post");
     for (const r of data.results || []) {
       if (r.status === "posted") {
         await notifyTelegram(`DA DANG BAI len Facebook\nBai #${r.id} | fb_post_id: ${r.fbPostId}\nKiem tra: https://phong-menly-dashboard.vercel.app/posts/${r.id}`);
+        scheduleGroupShare(r.id);
       } else {
         await notifyTelegram(`LOI DANG BAI #${r.id}\n${r.error}\nVao dashboard kiem tra va bam dang lai.`);
       }

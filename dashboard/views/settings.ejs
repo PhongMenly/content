@@ -13,6 +13,15 @@
     <label class="block-label" style="max-width:220px">Số nhóm tối đa mỗi lần chia sẻ
       <input type="number" id="max-per-run" min="1" max="10" value="5" />
     </label>
+    <label class="block-label" style="max-width:260px">Chờ bao nhiêu phút sau khi đăng Page
+      <input type="number" id="share-delay" min="5" max="120" value="20" />
+    </label>
+    <label class="settings-checkbox">
+      <input type="checkbox" id="auto-share-toggle" />
+      Tự động chia sẻ vào nhóm sau khi bài đăng Page thành công
+    </label>
+  </div>
+  <div class="settings-row">
     <button id="save-groups-btn" class="btn btn-primary">Lưu cài đặt</button>
     <span id="save-result" class="fb-subtext"></span>
   </div>
@@ -38,6 +47,8 @@
     const data = await res.json();
     document.getElementById('groups-input').value = (data.groups || []).join('\n');
     document.getElementById('max-per-run').value = data.maxPerRun || 5;
+    document.getElementById('share-delay').value = data.shareDelayMinutes || 20;
+    document.getElementById('auto-share-toggle').checked = data.autoShareAfterPost === true;
     const statusEl = document.getElementById('fb-login-status');
     statusEl.textContent = data.fbLoggedIn
       ? 'Đã đăng nhập Facebook cho bot chia sẻ.'
@@ -61,10 +72,12 @@
   document.getElementById('save-groups-btn').addEventListener('click', async () => {
     const groups = document.getElementById('groups-input').value.split('\n').map(s => s.trim()).filter(Boolean);
     const maxPerRun = document.getElementById('max-per-run').value;
+    const shareDelayMinutes = document.getElementById('share-delay').value;
+    const autoShareAfterPost = document.getElementById('auto-share-toggle').checked;
     const res = await fetch('/api/settings/groups', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groups, maxPerRun }),
+      body: JSON.stringify({ groups, maxPerRun, shareDelayMinutes, autoShareAfterPost }),
     });
     const data = await res.json();
     document.getElementById('save-result').textContent = res.ok

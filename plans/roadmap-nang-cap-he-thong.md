@@ -39,14 +39,13 @@ Mục tiêu: không mất dữ liệu, không lệch code, vận hành tin cậy
 - [ ] Trang Cài đặt trên dashboard: quản lý danh sách group, khung giờ đăng, xem log chia sẻ
 - [ ] Thông báo Telegram khi bài đăng thành công / thất bại (nối cron-runner → bot)
 
-### Giai đoạn 2 — Đa nền tảng (2–4 tuần)
-Mục tiêu: 1 bài duyệt xong → tự tỏa ra các kênh, đúng chiến lược repurpose.
-- [ ] Instagram (Graph API — cùng hệ Meta, làm trước, dễ nhất)
-- [ ] X/Twitter (API chính thức, gói free đủ 1-3 tweet/ngày)
-- [ ] TikTok (Content Posting API hoặc browser automation như group share)
-- [ ] LinkedIn (API hoặc automation)
-- [ ] Nút "Repurpose" trên dashboard: 1 bài Facebook → Agent tự viết 5 bản native cho 5 nền tảng → vào Chờ duyệt
-- [ ] Lịch đăng theo nền tảng (mỗi kênh khung giờ riêng, theo mục 5 CLAUDE.md)
+### Giai đoạn 2 — Làm chủ Facebook (QUYẾT ĐỊNH 06/07: chỉ tập trung Facebook, bỏ đa nền tảng)
+Mục tiêu: khai thác tối đa 1 kênh Facebook — Page + Group + đo lường.
+- [ ] Hoàn tất chia sẻ group: user đăng nhập FB cho bot + điền danh sách group vào trang Cài đặt
+- [ ] Tự động chia sẻ vào group SAU KHI bài đăng Page thành công (nối vào cron: đăng xong → chờ 15-30 phút → chia sẻ group)
+- [ ] Đăng bài kèm nhiều ảnh (album) và video lên Page
+- [ ] Trả lời comment tự động / kéo comment về Telegram để trả lời nhanh
+- [ ] Theo dõi giờ vàng: phân tích giờ đăng nào ra tương tác cao nhất từ số liệu thật
 
 ### Giai đoạn 3 — Đo tiền, không chỉ đo like (1–2 tháng)
 Mục tiêu: biết bài nào/pillar nào RA TIỀN để dồn lực đúng chỗ.

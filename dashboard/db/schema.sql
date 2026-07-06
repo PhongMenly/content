@@ -54,3 +54,9 @@ CREATE TABLE IF NOT EXISTS credit_snapshots (
   raw_response TEXT,
   fetched_at   BIGINT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS bot_kv (
+  key        TEXT PRIMARY KEY,
+  value      JSONB NOT NULL,
+  updated_at BIGINT NOT NULL
+);
