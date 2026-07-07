@@ -25,6 +25,30 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Tren Vercel serverless, app duoc import nhu 1 module (khong chay qua nhanh
+// `require.main === module`), nen migrate schema phai chay o day de tu ap dung
+// tren moi cold start, thay vi chi khi chay `node server.js` cuc bo.
+let schemaReady = null;
+function ensureSchemaOnce() {
+  if (!schemaReady) {
+    schemaReady = db.ensureSchema().catch((err) => {
+      schemaReady = null; // cho phep thu lai o request sau neu lan nay loi
+      throw err;
+    });
+  }
+  return schemaReady;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureSchemaOnce();
+    next();
+  } catch (err) {
+    console.error("Khong the khoi tao schema:", err);
+    res.status(500).json({ error: "Loi khoi tao schema" });
+  }
+});
+
 app.get("/login", (req, res) => res.render("login", { error: null }));
 app.post("/login", login);
 app.post("/logout", logout);
@@ -72,7 +96,7 @@ app.use((err, req, res, next) => {
 });
 
 if (require.main === module) {
-  db.ensureSchema()
+  ensureSchemaOnce()
     .then(() => {
       app.listen(PORT, () => {
         console.log(`Dashboard dang chay tai http://localhost:${PORT}`);

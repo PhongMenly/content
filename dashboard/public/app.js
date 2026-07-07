@@ -65,6 +65,7 @@ function renderPostCard(p) {
     : formatRelativeTime(p.created_at);
   const footer = isPosted
     ? `
+      ${p.fb_reach ? `<span>&#128065; ${p.fb_reach}</span>` : ""}
       <span>&#128077; ${p.fb_likes || 0}</span>
       <span>&#128172; ${p.fb_comments || 0}</span>
       <span>&#8635; ${p.fb_shares || 0}</span>
@@ -271,6 +272,8 @@ async function initPostDetailPage() {
     const metricsBox = document.getElementById("post-metrics-box");
     if (post.status === "posted") {
       metricsBox.style.display = "block";
+      const reachEl = document.getElementById("metric-reach");
+      if (reachEl) reachEl.textContent = post.fb_reach || 0;
       document.getElementById("metric-likes").textContent = post.fb_likes || 0;
       document.getElementById("metric-comments").textContent = post.fb_comments || 0;
       document.getElementById("metric-shares").textContent = post.fb_shares || 0;
@@ -432,6 +435,7 @@ function renderStatsRow(p, index) {
       <td class="stats-title-cell">${escapeHtml(p.title || p.slug)}</td>
       <td>${p.pillar || "-"}</td>
       <td>${formatDate(p.posted_at)}</td>
+      <td>${p.reach || 0}</td>
       <td>${p.likes}</td>
       <td>${p.comments}</td>
       <td>${p.shares}</td>
@@ -455,10 +459,11 @@ async function loadStats() {
   }
 
   summaryEl.innerHTML = `
-    <div class="stats-summary-card"><span>${data.count}</span>Bai da dang</div>
-    <div class="stats-summary-card"><span>${data.summary.likes}</span>Tong luot thich</div>
-    <div class="stats-summary-card"><span>${data.summary.comments}</span>Tong binh luan</div>
-    <div class="stats-summary-card"><span>${data.summary.shares}</span>Tong chia se</div>
+    <div class="stats-summary-card"><span>${data.count}</span>Bài đã đăng</div>
+    <div class="stats-summary-card"><span>${data.summary.reach || 0}</span>Tổng tiếp cận</div>
+    <div class="stats-summary-card"><span>${data.summary.likes}</span>Tổng lượt thích</div>
+    <div class="stats-summary-card"><span>${data.summary.comments}</span>Tổng bình luận</div>
+    <div class="stats-summary-card"><span>${data.summary.shares}</span>Tổng chia sẻ</div>
   `;
 
   tbody.innerHTML = data.posts.map(renderStatsRow).join("");

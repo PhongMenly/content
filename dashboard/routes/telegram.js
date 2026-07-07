@@ -4,6 +4,7 @@ const { callKyma } = require("../lib/telegram/kyma");
 const { logConversation, generateReport } = require("../lib/telegram/insights");
 const { learn, getMemoryReport } = require("../lib/telegram/memory");
 const { handleReviewReply } = require("../lib/telegram/review-flow");
+const { handleTopicReply, addOwnTopic, listPendingIdeas } = require("../lib/telegram/topic-flow");
 
 const router = express.Router();
 
@@ -88,7 +89,7 @@ async function handleMessage(message) {
 
   if (text === "/help") {
     const ownerCmds = isOwner
-      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n`
+      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n`
       : "";
     await sendMessage(targetChat,
       `Nhắn tự nhiên là được. Hoặc dùng:\n\n` +
@@ -100,9 +101,54 @@ async function handleMessage(message) {
     return;
   }
 
-  // Duyet/sua bai qua reply tu nhien (chi owner)
+  if (text === "/dexuat") {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    try {
+      await listPendingIdeas({ sendMessage: (t) => sendMessage(targetChat, t) });
+    } catch (err) {
+      console.error("[/dexuat] Loi:", err.message);
+      await sendMessage(targetChat, "Co loi khi lay danh sach y tuong: " + err.message);
+    }
+    return;
+  }
+
+  const ytuongMatch = text.match(/^\/ytuong\s+(.+)$/is);
+  if (text === "/ytuong" || ytuongMatch) {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    if (!ytuongMatch) {
+      await sendMessage(targetChat, 'Dung: "/ytuong <chu de ban muon viet>"');
+      return;
+    }
+    try {
+      await addOwnTopic(ytuongMatch[1].trim(), {
+        sendMessage: (t) => sendMessage(targetChat, t),
+        sendPhoto: (url, caption) => sendPhoto(targetChat, url, caption),
+      });
+    } catch (err) {
+      console.error("[/ytuong] Loi:", err.message);
+      await sendMessage(targetChat, "Co loi khi viet bai: " + err.message);
+    }
+    return;
+  }
+
+  // Duyet/sua chu de hoac bai qua reply tu nhien (chi owner)
   if (isOwner) {
     try {
+      const topicReply = await handleTopicReply(text, {
+        sendMessage: (t) => sendMessage(targetChat, t),
+        sendPhoto: (url, caption) => sendPhoto(targetChat, url, caption),
+      });
+      if (topicReply) {
+        await sendMessage(targetChat, topicReply);
+        return;
+      }
+
       const reviewReply = await handleReviewReply(text);
       if (reviewReply) {
         await sendMessage(targetChat, reviewReply);

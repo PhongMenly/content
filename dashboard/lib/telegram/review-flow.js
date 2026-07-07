@@ -17,20 +17,34 @@ async function saveState(state) {
   await db.setKv(STATE_KEY, state);
 }
 
+function formatDraftMessage(post) {
+  return (
+    `BAI MOI CHO DUYET (#${post.id})\n\n` +
+    `Tieu de: ${post.title || post.slug}\n` +
+    `Pillar: ${post.pillar || "chua gan"}\n\n` +
+    `${(post.body || "").slice(0, 900)}\n\n` +
+    `---\n` +
+    `Reply "duyet" de duyet bai (se tu dong len lich)\n` +
+    `Hoac "sua: <noi dung moi>" de chinh sua`
+  );
+}
+
+// Danh dau 1 bai da gui cho owner + la bai gan nhat dang cho reply "duyet"/"sua"
+// Dung khi bai duoc viet full ngay lap tuc (tu topic-flow) thay vi qua checkForNewDrafts.
+async function markSentAndShown(postId) {
+  const state = await loadState();
+  if (!state.sentPostIds.includes(postId)) state.sentPostIds.push(postId);
+  state.lastShownPostId = postId;
+  await saveState(state);
+}
+
 async function checkForNewDrafts({ sendMessage, sendPhoto }) {
   const state = await loadState();
   const drafts = await db.listPosts({ status: "ready_for_review" });
   const newDrafts = drafts.filter((p) => !state.sentPostIds.includes(p.id));
 
   for (const post of newDrafts) {
-    const caption =
-      `BAI MOI CHO DUYET (#${post.id})\n\n` +
-      `Tieu de: ${post.title || post.slug}\n` +
-      `Pillar: ${post.pillar || "chua gan"}\n\n` +
-      `${(post.body || "").slice(0, 900)}\n\n` +
-      `---\n` +
-      `Reply "duyet" de duyet bai (se tu dong len lich)\n` +
-      `Hoac "sua: <noi dung moi>" de chinh sua`;
+    const caption = formatDraftMessage(post);
 
     if (post.image_path) {
       await sendPhoto(post.image_path, caption);
@@ -119,4 +133,4 @@ async function checkForPostResults({ sendMessage }) {
   return newResults.length;
 }
 
-module.exports = { checkForNewDrafts, handleReviewReply, checkForPostResults };
+module.exports = { checkForNewDrafts, handleReviewReply, checkForPostResults, formatDraftMessage, markSentAndShown };

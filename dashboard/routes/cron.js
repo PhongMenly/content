@@ -5,6 +5,7 @@ const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
 const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
 const { generateReport } = require("../lib/telegram/insights");
 const { runBackup } = require("../lib/backup");
+const { proposeWeeklyTopics } = require("../lib/telegram/topic-flow");
 
 const OWNER_CHAT_ID = 8481163556;
 
@@ -28,7 +29,8 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
       const fbResult = post.image_path
         ? await postPhoto({ message: post.body, imageUrl: post.image_path })
         : await postText({ message: post.body });
-      const fbPostId = fbResult.id || fbResult.post_id;
+      // Uu tien post_id (ID bai viet that) — dang anh thi .id chi la ID cua tam anh
+      const fbPostId = fbResult.post_id || fbResult.id;
       await db.updatePost(post.id, { fb_post_id: fbPostId, posted_at: now });
       await db.updatePostStatus(post.id, "posted", { note: `Da dang len Facebook, id: ${fbPostId}`, actor: "system" });
       results.push({ id: post.id, status: "posted", fbPostId });
@@ -48,6 +50,10 @@ router.get("/sync-metrics", checkCronAuth, async (req, res) => {
   for (const post of posted) {
     try {
       const insights = await getPostInsights(post.fb_post_id);
+      // fb_post_id cu la photo id -> thay bang post id that de lan sau khoi tra cuu
+      if (insights.resolvedPostId && insights.resolvedPostId !== post.fb_post_id) {
+        await db.updatePost(post.id, { fb_post_id: insights.resolvedPostId });
+      }
       await db.updatePostMetrics(post.id, insights);
       results.push({ id: post.id, ...insights });
     } catch (err) {
@@ -87,6 +93,17 @@ router.get("/db-backup", checkCronAuth, async (req, res) => {
   try {
     const result = await runBackup();
     res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/generate-topics", checkCronAuth, async (req, res) => {
+  try {
+    const count = await proposeWeeklyTopics({
+      sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+    });
+    res.json({ ok: true, proposed: count });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

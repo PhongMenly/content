@@ -51,8 +51,8 @@ async function createPost(data) {
   const ts = now();
   const rows = await sql.query(
     `INSERT INTO posts
-      (slug, title, body, platform, pillar, format, cta_type, tags, status, image_path, source, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      (slug, title, body, platform, pillar, format, cta_type, tags, status, image_path, source, created_at, updated_at, angle)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING *`,
     [
       data.slug,
@@ -68,6 +68,7 @@ async function createPost(data) {
       data.source || "dashboard",
       ts,
       ts,
+      data.angle || null,
     ]
   );
   const post = rows[0];
@@ -83,7 +84,7 @@ async function updatePost(id, fields) {
   const allowed = [
     "title", "body", "platform", "pillar", "format", "cta_type", "tags",
     "image_path", "fb_post_id", "scheduled_time", "posted_at",
-    "fb_likes", "fb_comments", "fb_shares", "metrics_updated_at",
+    "fb_likes", "fb_comments", "fb_shares", "fb_reach", "metrics_updated_at", "angle",
   ];
   const sets = [];
   const values = [];
@@ -139,11 +140,11 @@ async function getHistoryForPost(postId) {
   return sql.query("SELECT * FROM post_history WHERE post_id = $1 ORDER BY created_at DESC", [postId]);
 }
 
-async function updatePostMetrics(id, { likes, comments, shares }) {
+async function updatePostMetrics(id, { likes, comments, shares, reach }) {
   const rows = await sql.query(
-    `UPDATE posts SET fb_likes = $1, fb_comments = $2, fb_shares = $3, metrics_updated_at = $4
-     WHERE id = $5 RETURNING *`,
-    [likes || 0, comments || 0, shares || 0, now(), id]
+    `UPDATE posts SET fb_likes = $1, fb_comments = $2, fb_shares = $3, fb_reach = $4, metrics_updated_at = $5
+     WHERE id = $6 RETURNING *`,
+    [likes || 0, comments || 0, shares || 0, reach || 0, now(), id]
   );
   invalidatePostsCache();
   return rows[0];

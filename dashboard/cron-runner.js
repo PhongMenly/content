@@ -1,51 +1,42 @@
 /**
- * Bo hen gio noi bo — thay cho Vercel Cron (dang rong).
- * - Moi 5 phut: goi /api/cron/auto-post de dang cac bai den gio
- *   -> co bai dang / bai loi thi bao ve Telegram
- * - Moi 60 phut: goi /api/cron/sync-metrics de cap nhat like/comment/share
- * - 2h sang hang ngay: backup toan bo DB ra backups/
+ * Chi con lam 1 viec: theo doi bai moi dang thanh cong de tu dong chia se
+ * vao Facebook group qua puppeteer-core (can browser that + session da luu,
+ * khong chay duoc tren Vercel serverless nen phai giu local).
+ *
+ * auto-post / sync-metrics / telegram-review-check / telegram-daily-report /
+ * db-backup gio da chay bang Vercel Cron (xem dashboard/vercel.json),
+ * khong con phu thuoc may nay nua.
+ *
  * Chay bang pm2 (xem ecosystem.config.js).
  */
 require("dotenv").config({ path: require("path").join(__dirname, ".env.local") });
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
-const { runBackup } = require("./scripts/backup-db");
 
 const FB_BOT_DIR = path.join(__dirname, "..", "facebook-bot");
+const BASE = process.env.CRON_TARGET_URL || "https://phong-menly-dashboard.vercel.app";
+const API_TOKEN = process.env.API_TOKEN;
 
-const BASE = process.env.CRON_TARGET_URL || "http://localhost:4000";
-const SECRET = process.env.CRON_SECRET;
-const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TG_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const STATE_FILE = path.join(__dirname, "group-share-state.json");
 
 function log(msg) {
   console.log(`[${new Date().toLocaleString("vi-VN")}] ${msg}`);
 }
 
-async function notifyTelegram(text) {
-  if (!TG_TOKEN || !TG_CHAT_ID) return;
+function loadState() {
   try {
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TG_CHAT_ID, text }),
-    });
-  } catch (err) {
-    log(`Telegram LOI: ${err.message}`);
+    return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+  } catch {
+    return { sharedIds: [] };
   }
 }
 
-async function call(pathname) {
-  const res = await fetch(`${BASE}${pathname}`, {
-    headers: { Authorization: `Bearer ${SECRET}` },
-  });
-  const data = await res.json().catch(() => ({}));
-  log(`${pathname} -> ${res.status} | processed: ${data.processed ?? "?"}`);
-  return data;
+function saveState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
 }
 
-// Sau khi bai len Page thanh cong: cho X phut roi tu chia se vao cac group (neu da bat trong Cai dat)
+// Sau khi bai len Page thanh cong: cho X phut roi tu dong chia se vao cac group (neu da bat trong Cai dat)
 function scheduleGroupShare(postId) {
   try {
     const groupsFile = path.join(FB_BOT_DIR, "groups.json");
@@ -63,7 +54,7 @@ function scheduleGroupShare(postId) {
     setTimeout(async () => {
       try {
         const res = await fetch(`${BASE}/api/posts/${postId}`, {
-          headers: { Authorization: `Bearer ${process.env.API_TOKEN}` },
+          headers: { Authorization: `Bearer ${API_TOKEN}` },
         });
         const post = await res.json();
         if (!post || !post.body) return;
@@ -80,7 +71,7 @@ function scheduleGroupShare(postId) {
           stdio: ["ignore", runLog, runLog],
         });
         child.unref();
-        await notifyTelegram(`Bat dau tu chia se bai #${postId} vao ${Math.min(config.groups.length, config.maxPerRun || 5)} group...`);
+        log(`Bat dau tu chia se bai #${postId} vao ${Math.min(config.groups.length, config.maxPerRun || 5)} group...`);
       } catch (err) {
         log(`Tu chia se group LOI: ${err.message}`);
       }
@@ -90,51 +81,29 @@ function scheduleGroupShare(postId) {
   }
 }
 
-async function autoPost() {
+async function watchForNewPosts() {
   try {
-    const data = await call("/api/cron/auto-post");
-    for (const r of data.results || []) {
-      if (r.status === "posted") {
-        await notifyTelegram(`DA DANG BAI len Facebook\nBai #${r.id} | fb_post_id: ${r.fbPostId}\nKiem tra: https://phong-menly-dashboard.vercel.app/posts/${r.id}`);
-        scheduleGroupShare(r.id);
-      } else {
-        await notifyTelegram(`LOI DANG BAI #${r.id}\n${r.error}\nVao dashboard kiem tra va bam dang lai.`);
-      }
+    const state = loadState();
+    const res = await fetch(`${BASE}/api/posts?status=posted`, {
+      headers: { Authorization: `Bearer ${API_TOKEN}` },
+    });
+    const posts = await res.json();
+    const newOnes = (posts || []).filter((p) => !state.sharedIds.includes(p.id));
+
+    for (const post of newOnes) {
+      scheduleGroupShare(post.id);
+      state.sharedIds.push(post.id);
+    }
+    if (newOnes.length) {
+      if (state.sharedIds.length > 500) state.sharedIds = state.sharedIds.slice(-500);
+      saveState(state);
+      log(`Phat hien ${newOnes.length} bai moi dang thanh cong`);
     }
   } catch (err) {
-    log(`auto-post LOI: ${err.message}`);
+    log(`watchForNewPosts LOI: ${err.message}`);
   }
 }
 
-async function syncMetrics() {
-  try {
-    await call("/api/cron/sync-metrics");
-  } catch (err) {
-    log(`sync-metrics LOI: ${err.message}`);
-  }
-}
-
-let lastBackupDate = "";
-async function dailyBackup() {
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  if (now.getHours() === 2 && lastBackupDate !== today) {
-    lastBackupDate = today;
-    try {
-      const result = await runBackup();
-      const rows = result && result.rowCount !== undefined ? result.rowCount : result;
-      log(`Backup DB xong (${rows} rows)`);
-      await notifyTelegram(`Backup du lieu hang ngay OK (${rows} dong).`);
-    } catch (err) {
-      log(`Backup LOI: ${err.message}`);
-      await notifyTelegram(`Backup du lieu LOI: ${err.message}`);
-    }
-  }
-}
-
-console.log("Cron runner khoi dong: auto-post 5 phut | sync-metrics 60 phut | backup 2h sang");
-autoPost();
-
-setInterval(autoPost, 5 * 60 * 1000);
-setInterval(syncMetrics, 60 * 60 * 1000);
-setInterval(dailyBackup, 10 * 60 * 1000);
+log("Cron runner (local, chi con group-share) khoi dong: theo doi bai moi moi 5 phut");
+watchForNewPosts();
+setInterval(watchForNewPosts, 5 * 60 * 1000);
