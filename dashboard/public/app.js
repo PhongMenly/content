@@ -156,6 +156,13 @@ function initIdeaToolbox() {
     btn.textContent = "AI đang tìm chủ đề...";
     note.textContent = "Thường mất 15-30 giây, danh sách cũng được gửi qua Telegram.";
     try {
+      // Tu dong luu tu khoa dang go trong o truoc khi chay, khoi can bam Luu rieng
+      const keywords = input.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+      await fetch("/api/settings/topic-keywords", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords }),
+      });
       const res = await fetch("/api/settings/generate-topics", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
