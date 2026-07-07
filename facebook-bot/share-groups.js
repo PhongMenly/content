@@ -20,14 +20,18 @@ const PROFILE_DIR = path.join(__dirname, ".browser-profile");
 const LOG_DIR = path.join(__dirname, "logs");
 
 function findEdge() {
+  // Windows + macOS: tim Edge truoc, khong co thi dung Chrome
   const candidates = [
     "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
     "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
-  throw new Error("Khong tim thay Microsoft Edge tren may");
+  throw new Error("Khong tim thay Microsoft Edge hoac Google Chrome tren may");
 }
 
 function parseArgs() {
