@@ -130,7 +130,12 @@ async function loadPostList(status) {
   if (!listEl) return;
   const url = status ? `/api/posts?status=${encodeURIComponent(status)}` : "/api/posts";
   const res = await fetch(url);
-  const posts = await res.json();
+  let posts = await res.json();
+
+  // Tab "Tat ca" la ban lam viec: khong hien bai da dang (xem o tab "Da dang")
+  if (!status) {
+    posts = posts.filter((p) => p.status !== "posted");
+  }
 
   if (posts.length === 0) {
     listEl.innerHTML = '<div class="empty-state"><strong>Chưa có bài viết nào ở trạng thái này</strong>Bấm nút "+ Tạo bài mới" phía trên để bắt đầu, hoặc chọn bộ lọc khác.</div>';
