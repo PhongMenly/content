@@ -81,8 +81,15 @@ async function completeOnce(systemPrompt, userPrompt) {
 
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay
 async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
+  const { getBrandProfile } = require("../brand-profile");
   const insights = await getContentInsights();
-  const systemPrompt = UYEN_NHI_BRAIN + DRAFT_TASK_INSTRUCTION + formatInsightsContext(insights);
+  const brandProfile = await getBrandProfile();
+  const systemPrompt =
+    UYEN_NHI_BRAIN +
+    `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +
+    brandProfile +
+    DRAFT_TASK_INSTRUCTION +
+    formatInsightsContext(insights);
   const userPrompt =
     `Chu de: ${post.title}\n` +
     `Pillar: ${post.pillar || "tu chon phu hop nhat"}\n` +

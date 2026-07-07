@@ -1,6 +1,27 @@
 <%- include('partials/header', { pageTitle: 'Cài đặt', active: 'settings' }) %>
 
 <div class="toolbar">
+  <h2>Thương hiệu của tôi — AI học từ kênh của bạn</h2>
+</div>
+
+<div class="settings-card">
+  <label class="block-label">Link kênh YouTube của bạn
+    <input type="text" id="brand-channel-input" placeholder="https://www.youtube.com/@Phongmenlyaigoglobalus" />
+  </label>
+  <div class="settings-row">
+    <button id="brand-analyze-btn" class="btn btn-primary">Phân tích và cập nhật hồ sơ thương hiệu</button>
+    <span id="brand-note" class="fb-subtext"></span>
+  </div>
+  <label class="block-label">Hồ sơ thương hiệu (AI dùng hồ sơ này mỗi lần đề xuất chủ đề và viết bài — bạn sửa tay được)
+    <textarea id="brand-profile-text" rows="10"></textarea>
+  </label>
+  <div class="settings-row">
+    <button id="brand-save-btn" class="btn">Lưu hồ sơ</button>
+    <span id="brand-save-note" class="fb-subtext"></span>
+  </div>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
   <h2>Chia sẻ lên nhóm Facebook</h2>
 </div>
 
@@ -88,6 +109,55 @@
 
   loadSettings();
   loadLogs();
+
+  // ===== Ho so thuong hieu =====
+  async function loadBrandProfile() {
+    const res = await fetch('/api/settings/brand-profile');
+    const data = await res.json();
+    document.getElementById('brand-profile-text').value = data.text || '';
+    if (data.sourceUrl) document.getElementById('brand-channel-input').value = data.sourceUrl;
+    if (data.isDefault) document.getElementById('brand-note').textContent = 'Đang dùng hồ sơ mặc định — dán link kênh và bấm phân tích để AI tự học từ kênh của bạn.';
+  }
+
+  document.getElementById('brand-analyze-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const url = document.getElementById('brand-channel-input').value.trim();
+    const note = document.getElementById('brand-note');
+    if (!url) { note.textContent = 'Dán link kênh trước đã.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'AI đang phân tích kênh...';
+    note.textContent = 'Thường mất 20-40 giây.';
+    try {
+      const res = await fetch('/api/settings/brand-profile/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        note.textContent = `Đã học từ ${data.videoCount} video của kênh "${data.channelTitle}". Xem và sửa hồ sơ bên dưới nếu cần.`;
+        document.getElementById('brand-profile-text').value = data.profile;
+      } else {
+        note.textContent = 'Lỗi: ' + (data.error || res.status);
+      }
+    } catch (err) {
+      note.textContent = 'Lỗi kết nối: ' + err.message;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Phân tích và cập nhật hồ sơ thương hiệu';
+  });
+
+  document.getElementById('brand-save-btn').addEventListener('click', async () => {
+    const text = document.getElementById('brand-profile-text').value;
+    const res = await fetch('/api/settings/brand-profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    document.getElementById('brand-save-note').textContent = res.ok ? 'Đã lưu hồ sơ.' : 'Lỗi lưu hồ sơ';
+  });
+
+  loadBrandProfile();
 </script>
 
 <%- include('partials/footer') %>

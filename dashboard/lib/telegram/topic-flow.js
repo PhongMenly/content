@@ -2,16 +2,7 @@ const db = require("../../db/client");
 const UYEN_NHI_BRAIN = require("./brain");
 const { completeOnce, draftTopic } = require("./draft");
 const { getReferenceChannel, buildReferenceBlock } = require("../reference-channel");
-
-// Dinh vi thuong hieu — moi chu de de xuat PHAI bam theo khung nay
-const BRAND_CONTEXT = `
-===== DINH VI THUONG HIEU PHONG MENLY (BAT BUOC BAM THEO) =====
-- Phong Menly: KOL AI / Startup Founder, dung AI THUC CHIEN trong kinh doanh hang ngay. Giong chia se trai nghiem that, khong ly thuyet, khong dao ly.
-- Khach hang muc tieu: (1) nguoi lam MMO/affiliate chua thanh cong lon, khong biet code; (2) chu kinh doanh online nho thieu nhan su content; (3) nguoi muon xay thuong hieu ca nhan ve AI. Ho KHONG mua AI — ho mua KET QUA KIEM TIEN tu AI.
-- He sinh thai san pham de gan CTA: Workshop 100k, Member VIP KOL AI System 50$, khoa Building KOL AI System, AI Tool AI Influencer 25$/thang, tu van 1:1 100$/gio.
-- Tu khoa thuong hieu: Thuc chien, Don gian, Kiem tien, Tu dong hoa, He thong.
-- Moi chu de phai cho audience thay ket qua/loi ich cu the (so tien, so gio tiet kiem, so buoc lam theo duoc ngay).
-`;
+const { getBrandProfile } = require("../brand-profile");
 
 const STATE_KEY = "topic_idea_state";
 const PILLARS = [
@@ -83,9 +74,11 @@ async function proposeWeeklyTopics({ sendMessage }) {
       `BAT BUOC: ca 5 chu de phai xoay quanh cac tu khoa nay (moi chu de bam sat it nhat 1 tu khoa), ket noi voi san pham/dich vu cua Phong khi phu hop.\n`
     : `\nCHE DO TU CHU DONG — khong co tu khoa dinh huong, tu do de xuat da dang theo 5 pillar va san pham cua Phong.\n`;
 
+  const brandProfile = await getBrandProfile();
   const systemPrompt =
     UYEN_NHI_BRAIN +
-    BRAND_CONTEXT +
+    `\n\n===== DINH VI THUONG HIEU PHONG MENLY (BAT BUOC BAM THEO) =====\n` +
+    brandProfile +
     `\n\n===== NHIEM VU: DE XUAT CHU DE BAI VIET MOI =====\n` +
     `De xuat dung 5 chu de bai Facebook moi, moi chu de gom title (ngan, hap dan), pillar (1 trong 5: ${PILLARS.join(", ")}), va angle (1 dong mo ta goc nhin/huong khai thac).\n` +
     keywordBlock +

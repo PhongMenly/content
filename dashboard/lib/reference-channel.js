@@ -33,14 +33,17 @@ function parseRssEntries(xml) {
     const videoId = (block.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/) || [])[1] || "";
     const published = (block.match(/<published>([^<]+)<\/published>/) || [])[1] || "";
     const views = parseInt((block.match(/<media:statistics views="(\d+)"/) || [])[1] || "0", 10);
+    const description = ((block.match(/<media:description>([\s\S]*?)<\/media:description>/) || [])[1] || "").slice(0, 500);
     if (title && videoId) {
-      entries.push({ title: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'"), videoId, published, views });
+      const clean = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+      entries.push({ title: clean(title), videoId, published, views, description: clean(description) });
     }
   }
   return entries;
 }
 
-async function analyzeChannel(url) {
+// Lay du lieu kenh (khong luu) — dung chung cho kenh mau va ho so thuong hieu
+async function fetchChannelData(url) {
   const channelId = await resolveChannelId(url);
   const rssRes = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
   if (!rssRes.ok) throw new Error(`Khong doc duoc RSS kenh (HTTP ${rssRes.status})`);
@@ -50,13 +53,11 @@ async function analyzeChannel(url) {
   const videos = parseRssEntries(xml).sort((a, b) => b.views - a.views);
   if (videos.length === 0) throw new Error("Kenh khong co video cong khai nao trong RSS.");
 
-  const data = {
-    url,
-    channelId,
-    channelTitle,
-    videos,
-    analyzedAt: new Date().toISOString(),
-  };
+  return { url, channelId, channelTitle, videos, analyzedAt: new Date().toISOString() };
+}
+
+async function analyzeChannel(url) {
+  const data = await fetchChannelData(url);
   await db.setKv(KV_KEY, data);
   return data;
 }
@@ -81,4 +82,4 @@ function buildReferenceBlock(data) {
   );
 }
 
-module.exports = { analyzeChannel, getReferenceChannel, clearReferenceChannel, buildReferenceBlock };
+module.exports = { analyzeChannel, fetchChannelData, getReferenceChannel, clearReferenceChannel, buildReferenceBlock };

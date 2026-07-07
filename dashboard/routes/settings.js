@@ -74,6 +74,62 @@ router.put("/topic-keywords", async (req, res) => {
   }
 });
 
+// ===== Ho so thuong hieu cua Phong =====
+const { fetchChannelData } = require("../lib/reference-channel");
+const { getBrandProfileMeta, setBrandProfile } = require("../lib/brand-profile");
+const { completeOnce } = require("../lib/telegram/draft");
+
+router.get("/brand-profile", async (req, res) => {
+  try {
+    res.json(await getBrandProfileMeta());
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.put("/brand-profile", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: "Ho so trong" });
+    const meta = await getBrandProfileMeta();
+    await setBrandProfile(text.trim(), meta.sourceUrl);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Dan link kenh CUA PHONG -> AI doc video, tu rut ra ho so thuong hieu
+router.post("/brand-profile/analyze", async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+      return res.status(400).json({ error: "Hien moi ho tro link kenh YouTube" });
+    }
+    const data = await fetchChannelData(url.trim());
+    const videoLines = data.videos
+      .map((v) => `- "${v.title}" (${v.views} luot xem)${v.description ? `\n  Mo ta: ${v.description.slice(0, 200)}` : ""}`)
+      .join("\n");
+
+    const systemPrompt =
+      `Ban la chuyen gia phan tich thuong hieu ca nhan. Nhiem vu: doc danh sach video cua kenh YouTube va rut ra HO SO THUONG HIEU cua chu kenh.\n` +
+      `Xuat ra dang gach dau dong tieng Viet, ngan gon, moi muc 1-2 dong, gom dung 6 muc:\n` +
+      `- Dinh vi: (chu kenh la ai, lam gi, phong cach)\n` +
+      `- Chu de chinh: (3-5 chu de kenh hay lam)\n` +
+      `- Tu khoa: (5-10 tu khoa xuat hien nhieu)\n` +
+      `- San pham/dich vu: (nhung gi kenh dang ban hoac quang ba)\n` +
+      `- Giong dieu: (cach dat tieu de, cach noi chuyen)\n` +
+      `- Cong thuc tieu de an khach: (rut tu cac video nhieu view nhat)\n` +
+      `Khong giai thich gi them ngoai 6 muc tren.`;
+
+    const profileText = await completeOnce(systemPrompt, `Kenh: ${data.channelTitle}\nDanh sach video:\n${videoLines}`);
+    await setBrandProfile(profileText, url.trim());
+    res.json({ ok: true, channelTitle: data.channelTitle, videoCount: data.videos.length, profile: profileText });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // ===== Kenh mau de AI hoc theo =====
 const { analyzeChannel, getReferenceChannel } = require("../lib/reference-channel");
 
