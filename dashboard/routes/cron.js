@@ -26,9 +26,18 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
   const results = [];
   for (const post of due) {
     try {
-      const fbResult = post.image_path
-        ? await postPhoto({ message: post.body, imageUrl: post.image_path })
-        : await postText({ message: post.body });
+      // Khoa an toan: den gio dang ma thieu noi dung hoac thieu anh -> KHONG dang
+      if (!post.body || !post.body.trim()) {
+        await db.updatePostStatus(post.id, "failed", { note: "Chan dang: bai khong co noi dung", actor: "system" });
+        results.push({ id: post.id, status: "failed", error: "Bai khong co noi dung" });
+        continue;
+      }
+      if (!post.image_path) {
+        await db.updatePostStatus(post.id, "failed", { note: "Chan dang: bai chua co hinh anh", actor: "system" });
+        results.push({ id: post.id, status: "failed", error: "Bai chua co hinh anh" });
+        continue;
+      }
+      const fbResult = await postPhoto({ message: post.body, imageUrl: post.image_path });
       // Uu tien post_id (ID bai viet that) — dang anh thi .id chi la ID cua tam anh
       const fbPostId = fbResult.post_id || fbResult.id;
       await db.updatePost(post.id, { fb_post_id: fbPostId, posted_at: now });

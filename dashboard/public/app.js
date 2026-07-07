@@ -302,11 +302,16 @@ async function initPostDetailPage() {
   });
 
   document.getElementById("approve-btn").addEventListener("click", async () => {
-    await fetch(`/api/posts/${postId}`, {
+    const res = await fetch(`/api/posts/${postId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Không duyệt được bài");
+      return;
+    }
     await reload();
   });
 

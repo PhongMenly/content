@@ -71,6 +71,11 @@ router.post("/", async (req, res, next) => {
     const allowedStatuses = ["draft", "ready_for_review"];
     const initialStatus = allowedStatuses.includes(status) ? status : "draft";
 
+    // Bai day len Cho duyet BAT BUOC phai co noi dung
+    if (initialStatus === "ready_for_review" && (!body || !body.trim())) {
+      return res.status(400).json({ error: "Bai chua co noi dung — khong duoc day len Cho duyet" });
+    }
+
     const baseSlug = slugify(title);
     const slug = `${new Date().toISOString().slice(0, 10)}-${baseSlug}`;
     const post = await db.createPost({
@@ -113,6 +118,14 @@ router.patch("/:id", async (req, res, next) => {
     }
 
     if (status === "approved") {
+      // Chi duyet khi bai da du: noi dung + hinh anh
+      const fresh = await db.getPost(post.id);
+      if (!fresh.body || !fresh.body.trim()) {
+        return res.status(400).json({ error: "Bai chua co noi dung — khong the duyet" });
+      }
+      if (!fresh.image_path) {
+        return res.status(400).json({ error: "Bai chua co hinh anh — them anh truoc khi duyet" });
+      }
       const allScheduled = await db.getScheduledPosts({});
       const taken = allScheduled.filter((p) => p.id !== post.id).map((p) => p.scheduled_time);
       const slot = nextAvailableSlot(taken);
