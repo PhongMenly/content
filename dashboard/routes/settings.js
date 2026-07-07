@@ -74,6 +74,35 @@ router.put("/topic-keywords", async (req, res) => {
   }
 });
 
+// ===== Kenh mau de AI hoc theo =====
+const { analyzeChannel, getReferenceChannel } = require("../lib/reference-channel");
+
+router.get("/reference-channel", async (req, res) => {
+  try {
+    res.json((await getReferenceChannel()) || null);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post("/reference-channel", async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+      return res.status(400).json({ error: "Hien moi ho tro link kenh YouTube (youtube.com/...)" });
+    }
+    const data = await analyzeChannel(url.trim());
+    res.json({
+      ok: true,
+      channelTitle: data.channelTitle,
+      videoCount: data.videos.length,
+      topVideos: data.videos.slice(0, 5).map((v) => ({ title: v.title, views: v.views })),
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // De xuat chu de ngay lap tuc (thay vi cho cron thu 2 hang tuan)
 router.post("/generate-topics", async (req, res) => {
   try {

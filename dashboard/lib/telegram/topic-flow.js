@@ -1,6 +1,17 @@
 const db = require("../../db/client");
 const UYEN_NHI_BRAIN = require("./brain");
 const { completeOnce, draftTopic } = require("./draft");
+const { getReferenceChannel, buildReferenceBlock } = require("../reference-channel");
+
+// Dinh vi thuong hieu — moi chu de de xuat PHAI bam theo khung nay
+const BRAND_CONTEXT = `
+===== DINH VI THUONG HIEU PHONG MENLY (BAT BUOC BAM THEO) =====
+- Phong Menly: KOL AI / Startup Founder, dung AI THUC CHIEN trong kinh doanh hang ngay. Giong chia se trai nghiem that, khong ly thuyet, khong dao ly.
+- Khach hang muc tieu: (1) nguoi lam MMO/affiliate chua thanh cong lon, khong biet code; (2) chu kinh doanh online nho thieu nhan su content; (3) nguoi muon xay thuong hieu ca nhan ve AI. Ho KHONG mua AI — ho mua KET QUA KIEM TIEN tu AI.
+- He sinh thai san pham de gan CTA: Workshop 100k, Member VIP KOL AI System 50$, khoa Building KOL AI System, AI Tool AI Influencer 25$/thang, tu van 1:1 100$/gio.
+- Tu khoa thuong hieu: Thuc chien, Don gian, Kiem tien, Tu dong hoa, He thong.
+- Moi chu de phai cho audience thay ket qua/loi ich cu the (so tien, so gio tiet kiem, so buoc lam theo duoc ngay).
+`;
 
 const STATE_KEY = "topic_idea_state";
 const PILLARS = [
@@ -65,6 +76,7 @@ async function setTopicKeywords(keywords) {
 async function proposeWeeklyTopics({ sendMessage }) {
   const recent = (await db.listPosts({})).slice(0, 25).map((p) => p.title).filter(Boolean);
   const keywords = await getTopicKeywords();
+  const refChannel = await getReferenceChannel();
 
   const keywordBlock = keywords.length
     ? `\nCHE DO THEO YEU CAU — Phong da dat TU KHOA dinh huong: ${keywords.join(", ")}.\n` +
@@ -73,9 +85,11 @@ async function proposeWeeklyTopics({ sendMessage }) {
 
   const systemPrompt =
     UYEN_NHI_BRAIN +
+    BRAND_CONTEXT +
     `\n\n===== NHIEM VU: DE XUAT CHU DE BAI VIET MOI =====\n` +
     `De xuat dung 5 chu de bai Facebook moi, moi chu de gom title (ngan, hap dan), pillar (1 trong 5: ${PILLARS.join(", ")}), va angle (1 dong mo ta goc nhin/huong khai thac).\n` +
     keywordBlock +
+    buildReferenceBlock(refChannel) +
     `Tranh trung/giong cac chu de da viet gan day.\n` +
     `Chi tra ve DUY NHAT 1 mang JSON hop le, khong giai thich gi them, dung dinh dang:\n` +
     `[{"title": "...", "pillar": "...", "angle": "..."}, ...]`;

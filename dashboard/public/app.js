@@ -179,6 +179,53 @@ function initIdeaToolbox() {
   });
 }
 
+function initRefChannel() {
+  const input = document.getElementById("ref-channel-input");
+  if (!input) return;
+  const note = document.getElementById("ref-channel-note");
+  const result = document.getElementById("ref-channel-result");
+
+  fetch("/api/settings/reference-channel")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data && data.url) {
+        input.value = data.url;
+        const top = (data.videos || []).slice(0, 3).map((v) => `"${v.title}"`).join(", ");
+        result.textContent = `Đang học kênh: ${data.channelTitle} — top video: ${top}`;
+      }
+    })
+    .catch(() => {});
+
+  document.getElementById("analyze-channel-btn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const url = input.value.trim();
+    if (!url) { note.textContent = "Dán link kênh trước đã."; return; }
+    btn.disabled = true;
+    btn.textContent = "Đang phân tích...";
+    note.textContent = "";
+    try {
+      const res = await fetch("/api/settings/reference-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        note.textContent = `Đã phân tích ${data.videoCount} video của kênh "${data.channelTitle}".`;
+        result.innerHTML = "Top video ăn khách:<br>" + data.topVideos
+          .map((v) => `• ${escapeHtml(v.title)} (${(v.views || 0).toLocaleString("vi-VN")} lượt xem)`)
+          .join("<br>");
+      } else {
+        note.textContent = "Lỗi: " + (data.error || res.status);
+      }
+    } catch (err) {
+      note.textContent = "Lỗi kết nối: " + err.message;
+    }
+    btn.disabled = false;
+    btn.textContent = "Phân tích kênh";
+  });
+}
+
 // ===== Hop doc bai + quan ly binh luan =====
 let pvCurrentPostId = null;
 let pvReplyTo = null; // { id, name } khi dang tra loi 1 binh luan
@@ -406,6 +453,7 @@ function initPostListPage() {
   });
 
   initIdeaToolbox();
+  initRefChannel();
 
   const newPostBtn = document.getElementById("new-post-btn");
   const dialog = document.getElementById("new-post-dialog");
