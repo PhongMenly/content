@@ -67,7 +67,7 @@ function renderPostCard(p) {
     ? `
       ${p.fb_reach ? `<span>&#128065; ${p.fb_reach}</span>` : ""}
       <span>&#128077; ${p.fb_likes || 0}</span>
-      <span>&#128172; ${p.fb_comments || 0}</span>
+      <span class="fb-action" onclick="event.stopPropagation(); openPostView(${p.id}, true)">&#128172; ${p.fb_comments || 0}</span>
       <span>&#8635; ${p.fb_shares || 0}</span>
     `
     : `
@@ -85,7 +85,7 @@ function renderPostCard(p) {
     ? `<div class="fb-schedule-line">Sẽ đăng lúc ${formatDateTime(p.scheduled_time)}</div>`
     : "";
   return `
-    <div class="post-card" onclick="window.location.href='/posts/${p.id}'">
+    <div class="post-card" onclick="openPostView(${p.id})">
       <div class="post-card-badges">
         ${p.posted_number ? `<span class="posted-number-badge">#${p.posted_number}</span>` : ""}
         <span class="status-badge status-${p.status}">${statusLabel(p.status)}</span>
@@ -123,6 +123,231 @@ async function deletePostFromCard(event, id) {
   }
   const activeFilter = document.querySelector(".filter-btn.active");
   loadPostList(activeFilter ? activeFilter.dataset.status : "");
+}
+
+// ===== Tu khoa dinh huong y tuong (tab Y tuong) =====
+function initIdeaToolbox() {
+  const toolbox = document.getElementById("idea-toolbox");
+  if (!toolbox) return;
+  const input = document.getElementById("idea-keywords");
+  const note = document.getElementById("idea-toolbox-note");
+
+  fetch("/api/settings/topic-keywords")
+    .then((r) => r.json())
+    .then((data) => { input.value = (data.keywords || []).join(", "); })
+    .catch(() => {});
+
+  document.getElementById("save-keywords-btn").addEventListener("click", async () => {
+    const keywords = input.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const res = await fetch("/api/settings/topic-keywords", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keywords }),
+    });
+    const data = await res.json();
+    note.textContent = res.ok
+      ? (data.saved > 0 ? `Đã lưu ${data.saved} từ khóa — AI sẽ bám theo khi đề xuất.` : "Đã xóa từ khóa — AI chuyển về chế độ tự chủ động.")
+      : "Lỗi lưu từ khóa";
+  });
+
+  document.getElementById("generate-ideas-btn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "AI đang tìm chủ đề...";
+    note.textContent = "Thường mất 15-30 giây, danh sách cũng được gửi qua Telegram.";
+    try {
+      const res = await fetch("/api/settings/generate-topics", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        note.textContent = `Đã tạo ${data.proposed} ý tưởng mới.`;
+        loadPostList("idea");
+      } else {
+        note.textContent = "Lỗi: " + (data.error || res.status);
+      }
+    } catch (err) {
+      note.textContent = "Lỗi kết nối: " + err.message;
+    }
+    btn.disabled = false;
+    btn.textContent = "Đề xuất chủ đề ngay";
+  });
+}
+
+// ===== Hop doc bai + quan ly binh luan =====
+let pvCurrentPostId = null;
+let pvReplyTo = null; // { id, name } khi dang tra loi 1 binh luan
+
+async function openPostView(id, focusComments = false) {
+  const dlg = document.getElementById("post-view-dialog");
+  if (!dlg) {
+    window.location.href = `/posts/${id}`;
+    return;
+  }
+  pvCurrentPostId = id;
+  pvReplyTo = null;
+
+  const res = await fetch(`/api/posts/${id}`);
+  if (!res.ok) return;
+  const post = await res.json();
+
+  document.getElementById("pv-title").textContent = post.title || post.slug || "";
+  const statusEl = document.getElementById("pv-status");
+  statusEl.textContent = statusLabel(post.status);
+  statusEl.className = `status-badge status-${post.status}`;
+
+  const scheduleEl = document.getElementById("pv-schedule");
+  scheduleEl.textContent =
+    post.status === "scheduled" && post.scheduled_time
+      ? `Sẽ đăng lúc ${formatDateTime(post.scheduled_time)}`
+      : "";
+
+  const imgEl = document.getElementById("pv-image");
+  if (post.image_path) {
+    imgEl.src = post.image_path;
+    imgEl.style.display = "block";
+  } else {
+    imgEl.style.display = "none";
+  }
+
+  document.getElementById("pv-body").textContent = post.body || "(Bài chưa có nội dung)";
+
+  const isPosted = post.status === "posted";
+  const metricsEl = document.getElementById("pv-metrics");
+  if (isPosted) {
+    metricsEl.style.display = "flex";
+    metricsEl.innerHTML = `
+      ${post.fb_reach ? `<span>&#128065; ${post.fb_reach} tiếp cận</span>` : ""}
+      <span>&#128077; ${post.fb_likes || 0} thích</span>
+      <span>&#128172; ${post.fb_comments || 0} bình luận</span>
+      <span>&#8635; ${post.fb_shares || 0} chia sẻ</span>
+    `;
+  } else {
+    metricsEl.style.display = "none";
+  }
+
+  const editBtn = document.getElementById("pv-edit");
+  editBtn.textContent = post.status === "ready_for_review" ? "Chỉnh sửa & duyệt" : "Chỉnh sửa";
+  editBtn.onclick = () => { window.location.href = `/posts/${id}`; };
+
+  const commentsBtn = document.getElementById("pv-comments-btn");
+  const commentsSection = document.getElementById("pv-comments-section");
+  if (isPosted && post.fb_post_id) {
+    commentsBtn.style.display = "inline-block";
+    commentsBtn.onclick = () => {
+      commentsSection.style.display = "block";
+      commentsBtn.style.display = "none";
+      loadPvComments();
+      commentsSection.scrollIntoView({ behavior: "smooth" });
+    };
+    if (focusComments) {
+      commentsSection.style.display = "block";
+      commentsBtn.style.display = "none";
+      loadPvComments();
+    } else {
+      commentsSection.style.display = "none";
+    }
+  } else {
+    commentsBtn.style.display = "none";
+    commentsSection.style.display = "none";
+  }
+
+  dlg.showModal();
+  if (focusComments) {
+    setTimeout(() => commentsSection.scrollIntoView({ behavior: "smooth" }), 150);
+  }
+}
+
+async function loadPvComments() {
+  const listEl = document.getElementById("pv-comments-list");
+  listEl.textContent = "Đang tải bình luận...";
+  const res = await fetch(`/api/posts/${pvCurrentPostId}/comments`);
+  const data = await res.json();
+  if (!res.ok) {
+    listEl.textContent = "Không tải được bình luận: " + (data.error || res.status);
+    return;
+  }
+  if (data.length === 0) {
+    listEl.innerHTML = '<div class="pv-comment-empty">Chưa có bình luận nào.</div>';
+    return;
+  }
+  listEl.innerHTML = data
+    .map((c) => {
+      const name = c.from && c.from.name ? c.from.name : "Người dùng Facebook";
+      const time = c.created_time ? new Date(c.created_time).toLocaleString("vi-VN") : "";
+      return `
+        <div class="pv-comment">
+          <div class="pv-comment-head">
+            <strong>${escapeHtml(name)}</strong>
+            <span>${time}</span>
+          </div>
+          <div class="pv-comment-msg">${escapeHtml(c.message || "")}</div>
+          <div class="pv-comment-actions">
+            <button onclick="pvSetReply('${c.id}', '${escapeHtml(name).replace(/'/g, "\\'")}')">Trả lời</button>
+            <button onclick="pvDeleteComment('${c.id}')">Xóa</button>
+            ${c.like_count ? `<span>${c.like_count} thích</span>` : ""}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function pvSetReply(commentId, name) {
+  pvReplyTo = { id: commentId, name };
+  const note = document.getElementById("pv-reply-note");
+  note.innerHTML = `Đang trả lời <strong>${name}</strong> <button onclick="pvCancelReply()">Hủy</button>`;
+  document.getElementById("pv-comment-input").focus();
+}
+
+function pvCancelReply() {
+  pvReplyTo = null;
+  document.getElementById("pv-reply-note").innerHTML = "";
+}
+
+async function pvSendComment() {
+  const input = document.getElementById("pv-comment-input");
+  const message = input.value.trim();
+  if (!message) return;
+  const sendBtn = document.getElementById("pv-comment-send");
+  sendBtn.disabled = true;
+  const res = await fetch(`/api/posts/${pvCurrentPostId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, comment_id: pvReplyTo ? pvReplyTo.id : undefined }),
+  });
+  sendBtn.disabled = false;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert("Không gửi được: " + (err.error || res.status));
+    return;
+  }
+  input.value = "";
+  pvCancelReply();
+  loadPvComments();
+}
+
+async function pvDeleteComment(commentId) {
+  if (!confirm("Xóa bình luận này khỏi Facebook?")) return;
+  const res = await fetch(`/api/posts/${pvCurrentPostId}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert("Không xóa được: " + (err.error || res.status));
+    return;
+  }
+  loadPvComments();
+}
+
+function initPostViewDialog() {
+  const dlg = document.getElementById("post-view-dialog");
+  if (!dlg) return;
+  document.getElementById("pv-close").addEventListener("click", () => dlg.close());
+  document.getElementById("pv-comment-send").addEventListener("click", pvSendComment);
+  document.getElementById("pv-comment-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") pvSendComment();
+  });
+  // Bam ra ngoai hop la dong
+  dlg.addEventListener("click", (e) => {
+    if (e.target === dlg) dlg.close();
+  });
 }
 
 async function loadPostList(status) {
@@ -163,13 +388,17 @@ function initPostListPage() {
 
   loadPostList("");
 
+  const ideaToolbox = document.getElementById("idea-toolbox");
   document.querySelectorAll(".filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       loadPostList(btn.dataset.status);
+      if (ideaToolbox) ideaToolbox.style.display = btn.dataset.status === "idea" ? "flex" : "none";
     });
   });
+
+  initIdeaToolbox();
 
   const newPostBtn = document.getElementById("new-post-btn");
   const dialog = document.getElementById("new-post-dialog");
@@ -278,7 +507,7 @@ async function initPostDetailPage() {
     if (post.status === "posted") {
       metricsBox.style.display = "block";
       const reachEl = document.getElementById("metric-reach");
-      if (reachEl) reachEl.textContent = post.fb_reach || 0;
+      if (reachEl) reachEl.textContent = (post.fb_reach === null || post.fb_reach === undefined) ? "—" : post.fb_reach;
       document.getElementById("metric-likes").textContent = post.fb_likes || 0;
       document.getElementById("metric-comments").textContent = post.fb_comments || 0;
       document.getElementById("metric-shares").textContent = post.fb_shares || 0;
@@ -445,7 +674,7 @@ function renderStatsRow(p, index) {
       <td class="stats-title-cell">${escapeHtml(p.title || p.slug)}</td>
       <td>${p.pillar || "-"}</td>
       <td>${formatDate(p.posted_at)}</td>
-      <td>${p.reach || 0}</td>
+      <td>${p.reach === null ? "—" : p.reach}</td>
       <td>${p.likes}</td>
       <td>${p.comments}</td>
       <td>${p.shares}</td>
@@ -470,7 +699,7 @@ async function loadStats() {
 
   summaryEl.innerHTML = `
     <div class="stats-summary-card"><span>${data.count}</span>Bài đã đăng</div>
-    <div class="stats-summary-card"><span>${data.summary.reach || 0}</span>Tổng tiếp cận</div>
+    <div class="stats-summary-card" title="Facebook đã ngừng cung cấp reach cấp bài viết qua API"><span>${data.summary.reach === null ? "—" : data.summary.reach}</span>Tổng tiếp cận</div>
     <div class="stats-summary-card"><span>${data.summary.likes}</span>Tổng lượt thích</div>
     <div class="stats-summary-card"><span>${data.summary.comments}</span>Tổng bình luận</div>
     <div class="stats-summary-card"><span>${data.summary.shares}</span>Tổng chia sẻ</div>
@@ -506,6 +735,7 @@ function initStatsPage() {
 document.addEventListener("DOMContentLoaded", () => {
   loadCreditWidget();
   initPostListPage();
+  initPostViewDialog();
   initPostDetailPage();
   initStatsPage();
 });

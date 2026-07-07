@@ -48,21 +48,41 @@ async function sendIdeaList(ideas, { sendMessage }) {
   await sendMessage(formatIdeaList(ideas));
 }
 
-// Tu dong de xuat 5 chu de moi, dua tren 5 pillar + tranh trung bai gan day
+const KEYWORDS_KEY = "topic_keywords";
+
+async function getTopicKeywords() {
+  const saved = await db.getKv(KEYWORDS_KEY);
+  return (saved && saved.keywords) || [];
+}
+
+async function setTopicKeywords(keywords) {
+  await db.setKv(KEYWORDS_KEY, { keywords, updatedAt: new Date().toISOString() });
+}
+
+// Tu dong de xuat 5 chu de moi.
+// 2 che do: co tu khoa Phong dat -> AI bam theo tu khoa (theo yeu cau);
+//           khong co tu khoa -> AI tu chu dong theo 5 pillar (mac dinh).
 async function proposeWeeklyTopics({ sendMessage }) {
   const recent = (await db.listPosts({})).slice(0, 25).map((p) => p.title).filter(Boolean);
+  const keywords = await getTopicKeywords();
+
+  const keywordBlock = keywords.length
+    ? `\nCHE DO THEO YEU CAU — Phong da dat TU KHOA dinh huong: ${keywords.join(", ")}.\n` +
+      `BAT BUOC: ca 5 chu de phai xoay quanh cac tu khoa nay (moi chu de bam sat it nhat 1 tu khoa), ket noi voi san pham/dich vu cua Phong khi phu hop.\n`
+    : `\nCHE DO TU CHU DONG — khong co tu khoa dinh huong, tu do de xuat da dang theo 5 pillar va san pham cua Phong.\n`;
 
   const systemPrompt =
     UYEN_NHI_BRAIN +
     `\n\n===== NHIEM VU: DE XUAT CHU DE BAI VIET MOI =====\n` +
     `De xuat dung 5 chu de bai Facebook moi, moi chu de gom title (ngan, hap dan), pillar (1 trong 5: ${PILLARS.join(", ")}), va angle (1 dong mo ta goc nhin/huong khai thac).\n` +
+    keywordBlock +
     `Tranh trung/giong cac chu de da viet gan day.\n` +
     `Chi tra ve DUY NHAT 1 mang JSON hop le, khong giai thich gi them, dung dinh dang:\n` +
     `[{"title": "...", "pillar": "...", "angle": "..."}, ...]`;
 
   const userPrompt = recent.length
     ? `Cac chu de da viet gan day (tranh trung):\n${recent.map((t) => `- ${t}`).join("\n")}`
-    : "Chua co bai nao truoc do, tu do de xuat theo 5 pillar.";
+    : "Chua co bai nao truoc do.";
 
   const raw = await completeOnce(systemPrompt, userPrompt);
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
@@ -152,4 +172,4 @@ async function handleTopicReply(text, { sendMessage, sendPhoto }) {
   return results.join("\n");
 }
 
-module.exports = { proposeWeeklyTopics, listPendingIdeas, addOwnTopic, handleTopicReply };
+module.exports = { proposeWeeklyTopics, listPendingIdeas, addOwnTopic, handleTopicReply, getTopicKeywords, setTopicKeywords };

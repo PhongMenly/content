@@ -637,6 +637,85 @@ dialog::backdrop { background: rgba(17,17,17,0.5); }
 .stats-table tr:hover td { background: #FAFAFB; }
 .stats-title-cell { white-space: normal; max-width: 320px; font-weight: 600; }
 
+/* ===== Hộp đọc bài + bình luận ===== */
+.post-view-dialog { max-width: 640px; padding: 0; }
+.post-view-dialog .pv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 2;
+}
+.pv-close-btn {
+  border: none;
+  background: #EEF0F3;
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--grey);
+}
+.pv-close-btn:hover { background: #E2E4E8; color: var(--ink); }
+.post-view-dialog h2 { margin: 14px 18px 6px; font-size: 18px; }
+.post-view-dialog .schedule-info { margin: 8px 18px; }
+.pv-image { width: 100%; max-height: 340px; object-fit: cover; display: block; margin-top: 8px; }
+.pv-body {
+  padding: 12px 18px;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 15px;
+  color: var(--text);
+}
+.pv-metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line);
+  color: var(--grey);
+  font-size: 14px;
+}
+.pv-actions { display: flex; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.pv-actions .btn { flex: 1; }
+
+.pv-comments-section { padding: 4px 18px 16px; border-top: 1px solid var(--line); }
+.pv-comments-section h3 { font-size: 15px; margin: 12px 0 8px; }
+.pv-comments-list { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+.pv-comment { background: #F4F5F7; border-radius: 10px; padding: 10px 12px; }
+.pv-comment-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.pv-comment-head span { color: var(--grey); font-size: 12px; }
+.pv-comment-msg { font-size: 14px; margin: 4px 0; white-space: pre-wrap; }
+.pv-comment-actions { display: flex; gap: 12px; align-items: center; }
+.pv-comment-actions button {
+  border: none; background: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--grey); padding: 4px 0;
+}
+.pv-comment-actions button:hover { color: var(--ink); }
+.pv-comment-empty { color: var(--grey); font-size: 14px; padding: 8px 0; }
+.pv-reply-note { font-size: 13px; color: var(--grey); margin: 8px 0 0; }
+.pv-reply-note button { border: none; background: none; color: #9B1C1C; cursor: pointer; font-size: 12.5px; }
+.pv-comment-box { display: flex; gap: 8px; margin-top: 10px; }
+.pv-comment-box input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #C9CDD4;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+}
+.pv-comment-box input:focus { outline: 2px solid var(--gold); border-color: var(--ink); }
+.fb-action { cursor: pointer; border-radius: 6px; padding: 2px 6px; }
+.fb-action:hover { background: #EEF0F3; color: var(--ink); }
+
+@media (max-width: 860px) {
+  .post-view-dialog { width: 100%; max-width: none; max-height: 92vh; margin: auto 0 0; border-radius: 16px 16px 0 0; }
+}
+
 /* ===== Cài đặt ===== */
 .settings-card {
   background: var(--card);

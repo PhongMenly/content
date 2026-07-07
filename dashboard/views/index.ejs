@@ -14,6 +14,18 @@
   <button class="filter-btn" data-status="posted">Đã đăng</button>
 </div>
 
+<div id="idea-toolbox" class="settings-card" style="display:none">
+  <label class="block-label">Từ khóa định hướng cho AI (cách nhau bằng dấu phẩy hoặc xuống dòng)
+    <textarea id="idea-keywords" rows="2" placeholder="Ví dụ: Claude Code, kiếm tiền affiliate tool AI, video Seedance 2..."></textarea>
+  </label>
+  <div class="settings-row">
+    <button id="save-keywords-btn" class="btn">Lưu từ khóa</button>
+    <button id="generate-ideas-btn" class="btn btn-primary">Đề xuất chủ đề ngay</button>
+    <span id="idea-toolbox-note" class="fb-subtext"></span>
+  </div>
+  <div class="fb-subtext">Có từ khóa: AI bám theo từ khóa và sản phẩm của bạn (chế độ theo yêu cầu). Để trống: AI tự chủ động đề xuất theo 5 pillar. AI cũng tự chạy sáng thứ 2 hàng tuần và gửi danh sách qua Telegram.</div>
+</div>
+
 <div id="post-list" class="post-list">
   <!-- Populated by app.js -->
 </div>
@@ -38,6 +50,31 @@
       <button type="submit" class="btn btn-primary">Tạo bài</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="post-view-dialog" class="post-view-dialog">
+  <div class="pv-head">
+    <span id="pv-status" class="status-badge"></span>
+    <button id="pv-close" class="pv-close-btn" aria-label="Đóng">&times;</button>
+  </div>
+  <h2 id="pv-title"></h2>
+  <div id="pv-schedule" class="schedule-info"></div>
+  <img id="pv-image" class="pv-image" style="display:none" alt="Ảnh bài viết" />
+  <div id="pv-body" class="pv-body"></div>
+  <div id="pv-metrics" class="pv-metrics" style="display:none"></div>
+  <div class="pv-actions">
+    <button id="pv-edit" class="btn btn-primary">Chỉnh sửa</button>
+    <button id="pv-comments-btn" class="btn" style="display:none">Xem bình luận</button>
+  </div>
+  <div id="pv-comments-section" class="pv-comments-section" style="display:none">
+    <h3>Bình luận trên Facebook</h3>
+    <div id="pv-comments-list" class="pv-comments-list">Đang tải...</div>
+    <div id="pv-reply-note" class="pv-reply-note"></div>
+    <div class="pv-comment-box">
+      <input type="text" id="pv-comment-input" placeholder="Trả lời với tư cách Page..." />
+      <button id="pv-comment-send" class="btn btn-primary">Gửi</button>
+    </div>
+  </div>
 </dialog>
 
 <%- include('partials/footer') %>

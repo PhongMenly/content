@@ -40,15 +40,19 @@ async function getPostInsights(fbPostId) {
   const data = await res.json();
   if (data.error) throw new Error(`Facebook API error: ${data.error.message}`);
 
-  // Luot tiep can (reach): Meta da go post_impressions_unique/post_impressions khoi API
-  // cho Page tu cuoi 2025. Van thu lan luot cac ten metric — neu Meta mo lai thi tu co so.
-  let reach = 0;
-  for (const metric of ["post_impressions_unique", "post_impressions", "views"]) {
+  // Luot tiep can (reach): Meta da go het cac metric reach/impressions cap bai viet
+  // khoi Graph API (da xac nhan qua test truc tiep: post_impressions_unique,
+  // post_impressions, post_reach, post_engaged_users deu tra loi "invalid insights
+  // metric" — khong phai loi quyen truy cap). De null (khong phai 0) de UI hien
+  // "khong co du lieu" thay vi hien thi sai la "0 luot tiep can".
+  // Van thu lai — neu Meta mo lai metric nao thi tu dong co so lieu.
+  let reach = null;
+  for (const metric of ["post_impressions_unique", "post_impressions", "post_reach"]) {
     try {
       const ir = await fetch(`${GRAPH_URL}/${postId}/insights?metric=${metric}&access_token=${pageAccessToken}`);
       const idata = await ir.json();
       const values = idata.data && idata.data[0] && idata.data[0].values;
-      if (values && values[0] && values[0].value) {
+      if (values && values[0] && values[0].value !== undefined) {
         reach = values[0].value;
         break;
       }
@@ -66,4 +70,34 @@ async function getPostInsights(fbPostId) {
   };
 }
 
-module.exports = { postText, postPhoto, getPostInsights };
+// ===== Quan ly binh luan =====
+
+async function getPostComments(fbPostId) {
+  const token = process.env.FB_PAGE_ACCESS_TOKEN;
+  const fields = "id,message,from{name,id},created_time,like_count,comment_count";
+  const url = `${GRAPH_URL}/${fbPostId}/comments?fields=${fields}&order=reverse_chronological&limit=50&access_token=${token}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(`Facebook API error: ${data.error.message}`);
+  return data.data || [];
+}
+
+// targetId = fb_post_id (binh luan vao bai) hoac comment_id (tra loi binh luan)
+async function createComment(targetId, message) {
+  const token = process.env.FB_PAGE_ACCESS_TOKEN;
+  const params = new URLSearchParams({ message, access_token: token });
+  const res = await fetch(`${GRAPH_URL}/${targetId}/comments`, { method: "POST", body: params });
+  const data = await res.json();
+  if (data.error) throw new Error(`Facebook API error: ${data.error.message}`);
+  return data;
+}
+
+async function deleteComment(commentId) {
+  const token = process.env.FB_PAGE_ACCESS_TOKEN;
+  const res = await fetch(`${GRAPH_URL}/${commentId}?access_token=${token}`, { method: "DELETE" });
+  const data = await res.json();
+  if (data.error) throw new Error(`Facebook API error: ${data.error.message}`);
+  return data;
+}
+
+module.exports = { postText, postPhoto, getPostInsights, getPostComments, createComment, deleteComment };

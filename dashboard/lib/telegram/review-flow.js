@@ -60,17 +60,38 @@ async function checkForNewDrafts({ sendMessage, sendPhoto }) {
   return newDrafts.length;
 }
 
+const STATUS_LABELS = {
+  draft: "ban nhap",
+  idea: "y tuong",
+  ready_for_review: "cho duyet",
+  scheduled: "da len lich",
+  posted: "da dang",
+  failed: "loi",
+  archived: "luu tru",
+};
+
+// Khop "duyet", "duyet bai 12", "duyet 12", "duyet #12" — group 1 = so bai (neu co).
+// Bat buoc neo ^...$ toan bo chuoi de KHONG khop nham cac cau noi chuyen binh thuong
+// bat dau bang "duyet" (vd "duyet roi do, cam on nhe" khong duoc coi la lenh duyet).
+const APPROVE_RE = /^(?:duyệt|duyet)(?:\s+(?:bài|bai)?\s*#?(\d+))?$/i;
+const EDIT_RE = /^(?:sửa|sua)(?:\s+(?:bài|bai)?\s*#?(\d+))?:?\s*([\s\S]+)$/i;
+
 async function handleReviewReply(text) {
   const state = await loadState();
-  if (!state.lastShownPostId) return null;
-
   const trimmed = text.trim();
-  const isApprove = /^duyệt|^duyet$/i.test(trimmed);
-  const editMatch = trimmed.match(/^sửa:?\s*(.+)$/is) || trimmed.match(/^sua:?\s*(.+)$/is);
 
-  if (isApprove) {
-    const post = await db.getPost(state.lastShownPostId);
-    if (!post) return null;
+  const approveMatch = trimmed.match(APPROVE_RE);
+  const editMatch = trimmed.match(EDIT_RE);
+
+  if (approveMatch) {
+    const targetId = approveMatch[1] ? Number(approveMatch[1]) : state.lastShownPostId;
+    if (!targetId) return null;
+
+    const post = await db.getPost(targetId);
+    if (!post) return `Khong tim thay bai #${targetId}.`;
+    if (post.status !== "ready_for_review") {
+      return `Bai #${post.id} hien khong o trang thai cho duyet (dang la: ${STATUS_LABELS[post.status] || post.status}).`;
+    }
 
     const allScheduled = await db.getScheduledPosts({});
     const taken = allScheduled.filter((p) => p.id !== post.id).map((p) => p.scheduled_time);
@@ -88,15 +109,24 @@ async function handleReviewReply(text) {
   }
 
   if (editMatch) {
-    const newBody = editMatch[1].trim();
-    await db.updatePost(state.lastShownPostId, { body: newBody });
+    const targetId = editMatch[1] ? Number(editMatch[1]) : state.lastShownPostId;
+    const newBody = editMatch[2].trim();
+    if (!targetId) return null;
+
+    const post = await db.getPost(targetId);
+    if (!post) return `Khong tim thay bai #${targetId}.`;
+    if (post.status !== "ready_for_review") {
+      return `Bai #${post.id} hien khong o trang thai cho duyet (dang la: ${STATUS_LABELS[post.status] || post.status}), khong the sua theo cach nay.`;
+    }
+
+    await db.updatePost(post.id, { body: newBody });
     await db.logHistory({
-      postId: state.lastShownPostId,
+      postId: post.id,
       eventType: "edited",
       note: "Sua qua Telegram",
       actor: "phong",
     });
-    return `Da cap nhat noi dung bai #${state.lastShownPostId}. Reply "duyet" khi ung y nhe.`;
+    return `Da cap nhat noi dung bai #${post.id}. Reply "duyet ${post.id}" khi ung y nhe.`;
   }
 
   return null;

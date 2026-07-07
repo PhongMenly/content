@@ -144,7 +144,7 @@ async function updatePostMetrics(id, { likes, comments, shares, reach }) {
   const rows = await sql.query(
     `UPDATE posts SET fb_likes = $1, fb_comments = $2, fb_shares = $3, fb_reach = $4, metrics_updated_at = $5
      WHERE id = $6 RETURNING *`,
-    [likes || 0, comments || 0, shares || 0, reach || 0, now(), id]
+    [likes || 0, comments || 0, shares || 0, reach ?? null, now(), id]
   );
   invalidatePostsCache();
   return rows[0];

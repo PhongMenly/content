@@ -6,7 +6,7 @@ const { spawn } = require("child_process");
 const db = require("../db/client");
 const { toUnixTime, nextAvailableSlot } = require("../lib/schedule");
 const { uploadImageBuffer } = require("../lib/blob");
-const { getPostInsights } = require("../lib/facebook");
+const { getPostInsights, getPostComments, createComment, deleteComment } = require("../lib/facebook");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -140,6 +140,43 @@ router.patch("/:id", async (req, res, next) => {
 
     const updated = await db.getPost(post.id);
     res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ===== Quan ly binh luan cua bai da dang =====
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const post = await db.getPost(req.params.id);
+    if (!post) return res.status(404).json({ error: "Khong tim thay bai viet" });
+    if (!post.fb_post_id) return res.status(400).json({ error: "Bai chua dang len Facebook" });
+    const comments = await getPostComments(post.fb_post_id);
+    res.json(comments);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post("/:id/comments", async (req, res) => {
+  try {
+    const post = await db.getPost(req.params.id);
+    if (!post) return res.status(404).json({ error: "Khong tim thay bai viet" });
+    if (!post.fb_post_id) return res.status(400).json({ error: "Bai chua dang len Facebook" });
+    const { message, comment_id } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: "Chua nhap noi dung binh luan" });
+    const target = comment_id || post.fb_post_id;
+    const result = await createComment(target, message.trim());
+    res.json({ ok: true, id: result.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete("/:id/comments/:commentId", async (req, res) => {
+  try {
+    await deleteComment(req.params.commentId);
+    res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
