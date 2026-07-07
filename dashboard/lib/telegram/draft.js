@@ -79,6 +79,19 @@ async function completeOnce(systemPrompt, userPrompt) {
   return data.choices[0].message.content.trim();
 }
 
+// Tu chon 1 anh tu kho cho bai moi viet: uu tien anh su kien (nguoi that),
+// tranh lap lai anh cua 30 bai gan nhat
+async function pickLibraryImage() {
+  const imgs = await db.listLibraryImages();
+  if (!imgs.length) return null;
+  const recentUrls = (await db.listPosts({})).slice(0, 30).map((p) => p.image_path).filter(Boolean);
+  const unused = imgs.filter((i) => !recentUrls.includes(i.url));
+  const pool = unused.length ? unused : imgs;
+  const eventPool = pool.filter((i) => (i.folder || "").toLowerCase().includes("su kien"));
+  const finalPool = eventPool.length ? eventPool : pool;
+  return finalPool[Math.floor(Math.random() * finalPool.length)].url;
+}
+
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay
 async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
   const { getBrandProfile } = require("../brand-profile");
@@ -100,6 +113,16 @@ async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
   const body = await completeOnce(systemPrompt, userPrompt);
 
   await db.updatePost(post.id, { body });
+
+  // Bai bat buoc co anh moi duyet/dang duoc -> tu gan anh tu kho neu chua co
+  if (!post.image_path) {
+    const imageUrl = await pickLibraryImage();
+    if (imageUrl) {
+      await db.updatePost(post.id, { image_path: imageUrl });
+      await db.logHistory({ postId: post.id, eventType: "image_uploaded", note: "Tu gan anh tu kho khi viet bai", actor: "system" });
+    }
+  }
+
   const updated = await db.updatePostStatus(post.id, "ready_for_review", {
     note: "Da viet full bai tu topic",
     actor: "system",
