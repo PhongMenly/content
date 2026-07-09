@@ -1,3 +1,47 @@
+// ===== Toast thong bao + thanh tien trinh (dung chung moi trang) =====
+function showToast(message, type = "success") {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("hide");
+    setTimeout(() => toast.remove(), 250);
+  }, 4000);
+}
+
+// Thanh tien trinh gia lap: chay dan len ~90% roi dung o do cho den khi goi finishProgressBar
+function startProgressBar(wrapEl) {
+  if (!wrapEl) return null;
+  wrapEl.classList.add("active");
+  const fill = wrapEl.querySelector(".progress-bar-fill");
+  let pct = 0;
+  if (fill) fill.style.width = "0%";
+  const interval = setInterval(() => {
+    pct += (90 - pct) * 0.06;
+    if (fill) fill.style.width = Math.min(pct, 90) + "%";
+  }, 400);
+  return interval;
+}
+
+function finishProgressBar(wrapEl, interval) {
+  if (interval) clearInterval(interval);
+  if (!wrapEl) return;
+  const fill = wrapEl.querySelector(".progress-bar-fill");
+  if (fill) fill.style.width = "100%";
+  setTimeout(() => {
+    wrapEl.classList.remove("active");
+    if (fill) fill.style.width = "0%";
+  }, 500);
+}
+
 async function loadCreditWidget() {
   try {
     const res = await fetch("/api/credits/latest");
@@ -49,6 +93,25 @@ function formatDateTime(unixSeconds) {
   return `${hh}:${mi} ngày ${dd}/${mm}`;
 }
 
+let fbPageName = "Facebook Page";
+async function loadFbPageName() {
+  try {
+    const res = await fetch("/api/settings/facebook-page-name");
+    const data = await res.json();
+    if (data.name) fbPageName = data.name;
+  } catch (err) {
+    // giu ten mac dinh neu loi
+  }
+}
+function fbPageInitials() {
+  return fbPageName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
 function formatDate(unixSeconds) {
   if (!unixSeconds) return "";
   const d = new Date(unixSeconds * 1000);
@@ -94,9 +157,9 @@ function renderPostCard(p) {
         </button>
       </div>
       <div class="fb-header">
-        <div class="fb-avatar">PM</div>
+        <div class="fb-avatar">${fbPageInitials()}</div>
         <div>
-          <div class="fb-page-name">Phong Menly TP</div>
+          <div class="fb-page-name">${fbPageName}</div>
           <div class="fb-subtext">${p.platform || "Facebook"} · ${dateLine}</div>
         </div>
       </div>
@@ -436,10 +499,11 @@ async function loadPostList(status) {
   listEl.innerHTML = posts.map(renderPostCard).join("");
 }
 
-function initPostListPage() {
+async function initPostListPage() {
   const listEl = document.getElementById("post-list");
   if (!listEl) return;
 
+  await loadFbPageName();
   loadPostList("");
 
   const ideaToolbox = document.getElementById("idea-toolbox");
@@ -652,27 +716,6 @@ async function initPostDetailPage() {
       return;
     }
     window.location.href = "/";
-  });
-
-  document.getElementById("share-groups-btn").addEventListener("click", async (e) => {
-    if (!confirm("Chia sẻ bài này lên các nhóm đã cấu hình? Quá trình chạy nền vài phút (giữ nhịp chậm như người thật để an toàn tài khoản).")) return;
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    btn.textContent = "Đang chia sẻ...";
-    const infoEl = document.getElementById("share-groups-info");
-    try {
-      const res = await fetch(`/api/posts/${postId}/share-groups`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        infoEl.textContent = "Không chia sẻ được: " + (data.error || res.status);
-      } else {
-        infoEl.textContent = data.message || "Đã bắt đầu chia sẻ nền. Kết quả sẽ ghi vào nhật ký.";
-      }
-    } catch (err) {
-      infoEl.textContent = "Lỗi kết nối: " + err.message;
-    }
-    btn.disabled = false;
-    btn.textContent = "Chia sẻ lên nhóm";
   });
 
   document.getElementById("sync-metrics-btn").addEventListener("click", async (e) => {

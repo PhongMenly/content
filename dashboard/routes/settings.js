@@ -5,6 +5,11 @@ const { sendMessage } = require("../lib/telegram/telegram-api");
 const OWNER_CHAT_ID = 8481163556;
 const router = express.Router();
 
+// ===== Ten Page hien thi tren giao dien (chi de hien thi, khong phai dinh danh dang bai) =====
+router.get("/facebook-page-name", (req, res) => {
+  res.json({ name: process.env.FB_PAGE_NAME || "Facebook Page" });
+});
+
 // ===== Tu khoa dinh huong y tuong =====
 router.get("/topic-keywords", async (req, res) => {
   try {
