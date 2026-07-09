@@ -13,7 +13,7 @@ router.get("/facebook-page-name", (req, res) => {
 // ===== Tu khoa dinh huong y tuong =====
 router.get("/topic-keywords", async (req, res) => {
   try {
-    res.json({ keywords: await getTopicKeywords() });
+    res.json({ keywords: await getTopicKeywords(req.query.key || "phong_menly") });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -25,7 +25,7 @@ router.put("/topic-keywords", async (req, res) => {
       .map((k) => String(k).trim())
       .filter(Boolean)
       .slice(0, 20);
-    await setTopicKeywords(keywords);
+    await setTopicKeywords(keywords, req.body.key || "phong_menly");
     res.json({ ok: true, saved: keywords.length });
   } catch (err) {
     res.status(400).json({ error: err.message });
