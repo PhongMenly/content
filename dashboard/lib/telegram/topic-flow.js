@@ -2,16 +2,32 @@ const db = require("../../db/client");
 const UYEN_NHI_BRAIN = require("./brain");
 const { completeOnce, draftTopic } = require("./draft");
 const { getReferenceChannel, buildReferenceBlock } = require("../reference-channel");
-const { getBrandProfile } = require("../brand-profile");
+const { getBrandProfile, DEFAULT_KEY } = require("../brand-profile");
 
 const STATE_KEY = "topic_idea_state";
-const PILLARS = [
-  "AI Thuc chien",
-  "Kiem tien voi AI",
-  "Build va Vibe Coding",
-  "Tu duy va Goc nhin",
-  "Video va Content AI",
-];
+
+// Moi persona co bo pillar rieng — Phong Menly (AI/affiliate) khac han Uyen Linh
+// (cong nghe/lam dep/lifestyle). Persona moi them vao brand-profile nhung chua co
+// trong map nay se dung PILLARS mac dinh cua Phong Menly.
+const PILLARS_BY_KEY = {
+  phong_menly: [
+    "AI Thuc chien",
+    "Kiem tien voi AI",
+    "Build va Vibe Coding",
+    "Tu duy va Goc nhin",
+    "Video va Content AI",
+  ],
+  uyen_linh: [
+    "Cong nghe & Cuoc song",
+    "Kiem tien & Doc lap tai chinh",
+    "Ve dep & Ban linh",
+    "Trai nghiem & Tu do",
+  ],
+};
+
+function getPillarsFor(brandKey) {
+  return PILLARS_BY_KEY[brandKey] || PILLARS_BY_KEY[DEFAULT_KEY];
+}
 
 function slugify(text) {
   return String(text)
@@ -31,8 +47,9 @@ async function saveTopicState(map) {
   await db.setKv(STATE_KEY, { map, updatedAt: new Date().toISOString() });
 }
 
-function formatIdeaList(ideas) {
-  const lines = ["CHU DE DE XUAT — reply de chon:\n"];
+function formatIdeaList(ideas, brandKey) {
+  const label = brandKey && brandKey !== DEFAULT_KEY ? ` (${brandKey})` : "";
+  const lines = [`CHU DE DE XUAT${label} — reply de chon:\n`];
   ideas.forEach((idea, i) => {
     lines.push(`${i + 1}. [${idea.pillar || "?"}] ${idea.title}`);
     if (idea.angle) lines.push(`   Goc nhin: ${idea.angle}`);
@@ -43,44 +60,53 @@ function formatIdeaList(ideas) {
   return lines.join("\n");
 }
 
-async function sendIdeaList(ideas, { sendMessage }) {
+async function sendIdeaList(ideas, { sendMessage }, brandKey) {
   const map = {};
   ideas.forEach((idea, i) => { map[i + 1] = idea.id; });
   await saveTopicState(map);
-  await sendMessage(formatIdeaList(ideas));
+  await sendMessage(formatIdeaList(ideas, brandKey));
 }
 
 const KEYWORDS_KEY = "topic_keywords";
 
-async function getTopicKeywords() {
-  const saved = await db.getKv(KEYWORDS_KEY);
+function keywordsKvKey(brandKey) {
+  // Giu nguyen key KV cu cho Phong Menly (tuong thich nguoc), persona moi dung key rieng.
+  return brandKey === DEFAULT_KEY || !brandKey ? KEYWORDS_KEY : `${KEYWORDS_KEY}:${brandKey}`;
+}
+
+async function getTopicKeywords(brandKey = DEFAULT_KEY) {
+  const saved = await db.getKv(keywordsKvKey(brandKey));
   return (saved && saved.keywords) || [];
 }
 
-async function setTopicKeywords(keywords) {
-  await db.setKv(KEYWORDS_KEY, { keywords, updatedAt: new Date().toISOString() });
+async function setTopicKeywords(keywords, brandKey = DEFAULT_KEY) {
+  await db.setKv(keywordsKvKey(brandKey), { keywords, updatedAt: new Date().toISOString() });
 }
 
-// Tu dong de xuat 5 chu de moi.
-// 2 che do: co tu khoa Phong dat -> AI bam theo tu khoa (theo yeu cau);
-//           khong co tu khoa -> AI tu chu dong theo 5 pillar (mac dinh).
-async function proposeWeeklyTopics({ sendMessage }) {
-  const recent = (await db.listPosts({})).slice(0, 25).map((p) => p.title).filter(Boolean);
-  const keywords = await getTopicKeywords();
+// Tu dong de xuat chu de moi cho 1 persona (brandKey).
+// 2 che do: co tu khoa dat san -> AI bam theo tu khoa; khong co -> AI tu chu dong theo pillar cua persona do.
+async function proposeTopics({ sendMessage, brandKey = DEFAULT_KEY, count = 5 }) {
+  const pillars = getPillarsFor(brandKey);
+  const recent = (await db.listPosts({}))
+    .filter((p) => (p.brand_key || DEFAULT_KEY) === brandKey)
+    .slice(0, 25)
+    .map((p) => p.title)
+    .filter(Boolean);
+  const keywords = await getTopicKeywords(brandKey);
   const refChannel = await getReferenceChannel();
 
   const keywordBlock = keywords.length
-    ? `\nCHE DO THEO YEU CAU — Phong da dat TU KHOA dinh huong: ${keywords.join(", ")}.\n` +
-      `BAT BUOC: ca 5 chu de phai xoay quanh cac tu khoa nay (moi chu de bam sat it nhat 1 tu khoa), ket noi voi san pham/dich vu cua Phong khi phu hop.\n`
-    : `\nCHE DO TU CHU DONG — khong co tu khoa dinh huong, tu do de xuat da dang theo 5 pillar va san pham cua Phong.\n`;
+    ? `\nCHE DO THEO YEU CAU — da dat TU KHOA dinh huong: ${keywords.join(", ")}.\n` +
+      `BAT BUOC: ca ${count} chu de phai xoay quanh cac tu khoa nay (moi chu de bam sat it nhat 1 tu khoa).\n`
+    : `\nCHE DO TU CHU DONG — khong co tu khoa dinh huong, tu do de xuat da dang theo cac pillar.\n`;
 
-  const brandProfile = await getBrandProfile();
+  const brandProfile = await getBrandProfile(brandKey);
   const systemPrompt =
     UYEN_NHI_BRAIN +
-    `\n\n===== DINH VI THUONG HIEU PHONG MENLY (BAT BUOC BAM THEO) =====\n` +
+    `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +
     brandProfile +
     `\n\n===== NHIEM VU: DE XUAT CHU DE BAI VIET MOI =====\n` +
-    `De xuat dung 5 chu de bai Facebook moi, moi chu de gom title (ngan, hap dan), pillar (1 trong 5: ${PILLARS.join(", ")}), va angle (1 dong mo ta goc nhin/huong khai thac).\n` +
+    `De xuat dung ${count} chu de bai Facebook moi, moi chu de gom title (ngan, hap dan), pillar (1 trong ${pillars.length}: ${pillars.join(", ")}), va angle (1 dong mo ta goc nhin/huong khai thac).\n` +
     keywordBlock +
     buildReferenceBlock(refChannel) +
     `Tranh trung/giong cac chu de da viet gan day.\n` +
@@ -95,7 +121,7 @@ async function proposeWeeklyTopics({ sendMessage }) {
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error("Khong parse duoc danh sach chu de tu AI: " + raw.slice(0, 200));
 
-  const ideas = JSON.parse(jsonMatch[0]).slice(0, 5);
+  const ideas = JSON.parse(jsonMatch[0]).slice(0, count);
   const created = [];
   for (const idea of ideas) {
     const slug = `${new Date().toISOString().slice(0, 10)}-${slugify(idea.title)}`;
@@ -105,13 +131,19 @@ async function proposeWeeklyTopics({ sendMessage }) {
       pillar: idea.pillar,
       angle: idea.angle,
       status: "idea",
-      source: "ai-weekly",
+      source: brandKey === DEFAULT_KEY ? "ai-weekly" : `ai-daily-${brandKey}`,
+      brand_key: brandKey === DEFAULT_KEY ? null : brandKey,
     });
     created.push(post);
   }
 
-  await sendIdeaList(created, { sendMessage });
+  await sendIdeaList(created, { sendMessage }, brandKey);
   return created.length;
+}
+
+// Giu ten cu de tuong thich nguoc (cron/Telegram command hien tai dang goi ham nay cho Phong Menly).
+async function proposeWeeklyTopics({ sendMessage }) {
+  return proposeTopics({ sendMessage, brandKey: DEFAULT_KEY, count: 5 });
 }
 
 // Liet ke lai cac y tuong dang cho duyet (lenh /dexuat)
@@ -179,4 +211,12 @@ async function handleTopicReply(text, { sendMessage, sendPhoto }) {
   return results.join("\n");
 }
 
-module.exports = { proposeWeeklyTopics, listPendingIdeas, addOwnTopic, handleTopicReply, getTopicKeywords, setTopicKeywords };
+module.exports = {
+  proposeTopics,
+  proposeWeeklyTopics,
+  listPendingIdeas,
+  addOwnTopic,
+  handleTopicReply,
+  getTopicKeywords,
+  setTopicKeywords,
+};

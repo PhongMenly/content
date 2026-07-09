@@ -6,7 +6,7 @@ const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
 const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
 const { generateReport } = require("../lib/telegram/insights");
 const { runBackup } = require("../lib/backup");
-const { proposeWeeklyTopics } = require("../lib/telegram/topic-flow");
+const { proposeTopics } = require("../lib/telegram/topic-flow");
 
 const OWNER_CHAT_ID = 8481163556;
 
@@ -113,10 +113,13 @@ router.get("/db-backup", checkCronAuth, async (req, res) => {
 
 router.get("/generate-topics", checkCronAuth, async (req, res) => {
   try {
-    const count = await proposeWeeklyTopics({
+    const brandKey = req.query.brandKey || "phong_menly";
+    const count = await proposeTopics({
       sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+      brandKey,
+      count: brandKey === "phong_menly" ? 5 : 3,
     });
-    res.json({ ok: true, proposed: count });
+    res.json({ ok: true, proposed: count, brandKey });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

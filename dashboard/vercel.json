@@ -5,7 +5,8 @@
     { "path": "/api/cron/telegram-review-check", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/telegram-daily-report", "schedule": "0 1 * * *" },
     { "path": "/api/cron/db-backup", "schedule": "0 19 * * *" },
-    { "path": "/api/cron/generate-topics", "schedule": "0 1 * * 1" }
+    { "path": "/api/cron/generate-topics", "schedule": "0 1 * * 1" },
+    { "path": "/api/cron/generate-topics?brandKey=uyen_linh", "schedule": "0 1 * * *" }
   ],
   "functions": {
     "server.js": { "maxDuration": 60 }
