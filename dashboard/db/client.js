@@ -51,8 +51,8 @@ async function createPost(data) {
   const ts = now();
   const rows = await sql.query(
     `INSERT INTO posts
-      (slug, title, body, platform, pillar, format, cta_type, tags, status, image_path, source, created_at, updated_at, angle)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      (slug, title, body, platform, pillar, format, cta_type, tags, status, image_path, source, created_at, updated_at, angle, brand_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *`,
     [
       data.slug,
@@ -69,6 +69,7 @@ async function createPost(data) {
       ts,
       ts,
       data.angle || null,
+      data.brand_key || null,
     ]
   );
   const post = rows[0];
@@ -84,7 +85,7 @@ async function updatePost(id, fields) {
   const allowed = [
     "title", "body", "platform", "pillar", "format", "cta_type", "tags",
     "image_path", "fb_post_id", "scheduled_time", "posted_at",
-    "fb_likes", "fb_comments", "fb_shares", "fb_reach", "metrics_updated_at", "angle",
+    "fb_likes", "fb_comments", "fb_shares", "fb_reach", "metrics_updated_at", "angle", "brand_key",
   ];
   const sets = [];
   const values = [];
@@ -211,6 +212,30 @@ async function setKv(key, value) {
   );
 }
 
+async function listBrandProfiles() {
+  return sql.query("SELECT * FROM brand_profiles ORDER BY name ASC");
+}
+
+async function getBrandProfileByKey(key) {
+  const rows = await sql.query("SELECT * FROM brand_profiles WHERE key = $1", [key]);
+  return rows[0] || null;
+}
+
+async function upsertBrandProfile({ key, name, text, sourceUrl }) {
+  const rows = await sql.query(
+    `INSERT INTO brand_profiles (key, name, text, source_url, updated_at) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (key) DO UPDATE SET name = $2, text = $3, source_url = $4, updated_at = $5
+     RETURNING *`,
+    [key, name, text, sourceUrl || null, now()]
+  );
+  return rows[0];
+}
+
+async function deleteBrandProfile(key) {
+  const rows = await sql.query("DELETE FROM brand_profiles WHERE key = $1 RETURNING *", [key]);
+  return rows[0] || null;
+}
+
 async function deletePost(id) {
   await sql.query("DELETE FROM post_history WHERE post_id = $1", [id]);
   const rows = await sql.query("DELETE FROM posts WHERE id = $1 RETURNING *", [id]);
@@ -225,6 +250,10 @@ module.exports = {
   removeLibraryImage,
   getKv,
   setKv,
+  listBrandProfiles,
+  getBrandProfileByKey,
+  upsertBrandProfile,
+  deleteBrandProfile,
   listPosts,
   listPostedPosts,
   getPost,

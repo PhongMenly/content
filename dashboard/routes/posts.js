@@ -61,7 +61,7 @@ router.get("/:id", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { title, platform, pillar, format, cta_type, tags, body, status, source, image_path } = req.body;
+    const { title, platform, pillar, format, cta_type, tags, body, status, source, image_path, brand_key } = req.body;
     if (!title) return res.status(400).json({ error: "Thieu title" });
 
     // Agent duoc phep tao bai thang vao trang thai cho duyet
@@ -87,6 +87,7 @@ router.post("/", async (req, res, next) => {
       status: initialStatus,
       source: source || "dashboard",
       image_path: image_path || null,
+      brand_key: brand_key || null,
     });
     res.status(201).json(post);
   } catch (err) {

@@ -1,17 +1,49 @@
 <%- include('partials/header', { pageTitle: 'Cài đặt', active: 'settings' }) %>
 
 <div class="toolbar">
-  <h2>Thương hiệu của tôi — AI học từ kênh của bạn</h2>
+  <h2>Hồ sơ thương hiệu — AI học từ kênh của bạn</h2>
 </div>
 
 <div class="settings-card">
-  <label class="block-label">Link kênh YouTube của bạn
-    <input type="text" id="brand-channel-input" placeholder="https://www.youtube.com/@Phongmenlyaigoglobalus" />
+  <label class="block-label">Đang chỉnh hồ sơ cho
+    <div class="settings-row">
+      <select id="brand-profile-select" style="flex:1"></select>
+      <button id="brand-add-profile-btn" class="btn">+ Thêm hồ sơ mới</button>
+      <button id="brand-delete-profile-btn" class="btn btn-danger">Xóa hồ sơ này</button>
+    </div>
+  </label>
+  <div class="fb-subtext">Mỗi Page/persona (Phong Menly, Uyên Linh...) nên có 1 hồ sơ riêng để AI viết đúng văn phong của từng kênh.</div>
+
+  <hr style="border:none;border-top:1px solid var(--line, #DFE2E7);margin:16px 0" />
+
+  <label class="block-label">Dán 1 link bất kỳ (kênh YouTube, trang web, blog...)
+    <input type="text" id="brand-channel-input" placeholder="https://www.youtube.com/@Phongmenlyaigoglobalus hoặc bất kỳ link nào" />
   </label>
   <div class="settings-row">
     <button id="brand-analyze-btn" class="btn btn-primary">Phân tích và cập nhật hồ sơ thương hiệu</button>
     <span id="brand-note" class="fb-subtext"></span>
   </div>
+  <div id="brand-progress-wrap" class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+  <div class="fb-subtext">Link YouTube sẽ đọc chính xác theo lượt xem từng video. Link khác (web, blog...) AI đọc nội dung trang — trang cần đăng nhập hoặc load bằng JavaScript (Facebook cá nhân, TikTok...) có thể đọc được rất ít.</div>
+
+  <div class="settings-row" style="margin-top:8px">
+    <button id="brand-analyze-fb-btn" class="btn">Phân tích từ Facebook Page của tôi</button>
+    <span id="brand-fb-note" class="fb-subtext"></span>
+  </div>
+  <div id="brand-fb-progress-wrap" class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+  <div class="fb-subtext">Dùng luôn trang Facebook đang kết nối để đăng bài (không cần dán link) — AI đọc các bài cũ, xếp theo tương tác để rút hồ sơ thương hiệu.</div>
+
+  <hr style="border:none;border-top:1px solid var(--line, #DFE2E7);margin:16px 0" />
+
+  <label class="block-label">Hoặc dán trực tiếp nội dung bất kỳ (copy vài bài từ Facebook cá nhân, tin nhắn, ghi chú...) — luôn đọc được 100%, không phụ thuộc link. Nên dán từ 3-5 bài trở lên (tối thiểu ~400 ký tự) để AI rút hồ sơ chính xác, tránh đoán mò.
+    <textarea id="brand-paste-text" rows="6" placeholder="Copy vài bài viết/đoạn văn tiêu biểu (càng nhiều bài càng chính xác) rồi dán vào đây..."></textarea>
+  </label>
+  <div class="settings-row">
+    <button id="brand-analyze-text-btn" class="btn">Phân tích nội dung đã dán</button>
+    <span id="brand-text-note" class="fb-subtext"></span>
+  </div>
+  <div id="brand-text-progress-wrap" class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+
   <label class="block-label">Hồ sơ thương hiệu (AI dùng hồ sơ này mỗi lần đề xuất chủ đề và viết bài — bạn sửa tay được)
     <textarea id="brand-profile-text" rows="10"></textarea>
   </label>
@@ -21,130 +53,164 @@
   </div>
 </div>
 
-<div class="toolbar" style="margin-top:24px">
-  <h2>Chia sẻ lên nhóm Facebook</h2>
-</div>
-
-<div class="settings-card">
-  <div id="fb-login-status" class="schedule-info"></div>
-  <label class="block-label">Danh sách nhóm (mỗi dòng 1 link, dạng https://www.facebook.com/groups/...)
-    <textarea id="groups-input" rows="8" placeholder="https://www.facebook.com/groups/nhom-cua-ban"></textarea>
-  </label>
-  <div class="settings-row">
-    <label class="block-label" style="max-width:220px">Số nhóm tối đa mỗi lần chia sẻ
-      <input type="number" id="max-per-run" min="1" max="10" value="5" />
-    </label>
-    <label class="block-label" style="max-width:260px">Chờ bao nhiêu phút sau khi đăng Page
-      <input type="number" id="share-delay" min="5" max="120" value="20" />
-    </label>
-    <label class="settings-checkbox">
-      <input type="checkbox" id="auto-share-toggle" />
-      Tự động chia sẻ vào nhóm sau khi bài đăng Page thành công
-    </label>
-  </div>
-  <div class="settings-row">
-    <button id="save-groups-btn" class="btn btn-primary">Lưu cài đặt</button>
-    <span id="save-result" class="fb-subtext"></span>
-  </div>
-</div>
-
-<div class="toolbar" style="margin-top:24px">
-  <h2>Kết quả chia sẻ nhóm gần nhất</h2>
-</div>
-<div class="settings-card">
-  <ul id="share-log" class="history-list"><li>Chưa có dữ liệu</li></ul>
-</div>
-
-<div class="toolbar" style="margin-top:24px">
-  <h2>Nhật ký hệ thống tự đăng (cron)</h2>
-</div>
-<div class="settings-card">
-  <pre id="cron-log" class="cron-log">Đang tải...</pre>
-</div>
-
 <script>
-  async function loadSettings() {
-    const res = await fetch('/api/settings/groups');
-    const data = await res.json();
-    document.getElementById('groups-input').value = (data.groups || []).join('\n');
-    document.getElementById('max-per-run').value = data.maxPerRun || 5;
-    document.getElementById('share-delay').value = data.shareDelayMinutes || 20;
-    document.getElementById('auto-share-toggle').checked = data.autoShareAfterPost === true;
-    const statusEl = document.getElementById('fb-login-status');
-    statusEl.textContent = data.fbLoggedIn
-      ? 'Đã đăng nhập Facebook cho bot chia sẻ.'
-      : 'CHƯA đăng nhập Facebook. Mở PowerShell chạy: cd d:\\Content-Creation-Template\\facebook-bot rồi node share-groups.js --setup';
-    if (!data.fbLoggedIn) statusEl.style.background = '#FDF3D7', statusEl.style.color = '#92600A';
+  // ===== Ho so thuong hieu (nhieu persona) =====
+  let currentProfileKey = 'phong_menly';
+
+  async function loadProfileList() {
+    const res = await fetch('/api/settings/brand-profiles');
+    const profiles = await res.json();
+    const select = document.getElementById('brand-profile-select');
+    select.innerHTML = profiles.map((p) => `<option value="${p.key}">${p.name}</option>`).join('');
+    if (profiles.some((p) => p.key === currentProfileKey)) {
+      select.value = currentProfileKey;
+    } else if (profiles.length > 0) {
+      currentProfileKey = profiles[0].key;
+      select.value = currentProfileKey;
+    }
+    document.getElementById('brand-delete-profile-btn').style.display = currentProfileKey === 'phong_menly' ? 'none' : 'inline-block';
   }
 
-  async function loadLogs() {
-    const res = await fetch('/api/settings/share-log');
-    const data = await res.json();
-    if (data.lastResult && data.lastResult.length) {
-      document.getElementById('share-log').innerHTML = data.lastResult
-        .map(r => `<li>${r.ok ? 'OK' : 'LỖI'} — ${r.url}${r.error ? ' — ' + r.error : ''}</li>`)
-        .join('');
-    }
-    if (data.cronTail && data.cronTail.length) {
-      document.getElementById('cron-log').textContent = data.cronTail.join('\n');
-    }
-  }
-
-  document.getElementById('save-groups-btn').addEventListener('click', async () => {
-    const groups = document.getElementById('groups-input').value.split('\n').map(s => s.trim()).filter(Boolean);
-    const maxPerRun = document.getElementById('max-per-run').value;
-    const shareDelayMinutes = document.getElementById('share-delay').value;
-    const autoShareAfterPost = document.getElementById('auto-share-toggle').checked;
-    const res = await fetch('/api/settings/groups', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groups, maxPerRun, shareDelayMinutes, autoShareAfterPost }),
-    });
-    const data = await res.json();
-    document.getElementById('save-result').textContent = res.ok
-      ? `Đã lưu ${data.saved} nhóm hợp lệ.`
-      : 'Lỗi lưu cài đặt';
-    loadSettings();
+  document.getElementById('brand-profile-select').addEventListener('change', async (e) => {
+    currentProfileKey = e.target.value;
+    document.getElementById('brand-delete-profile-btn').style.display = currentProfileKey === 'phong_menly' ? 'none' : 'inline-block';
+    await loadBrandProfile();
   });
 
-  loadSettings();
-  loadLogs();
+  document.getElementById('brand-add-profile-btn').addEventListener('click', async () => {
+    const name = prompt('Tên hồ sơ mới (vd: Uyên Linh):');
+    if (!name || !name.trim()) return;
+    const key = name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+    const res = await fetch('/api/settings/brand-profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, name: name.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast('Lỗi tạo hồ sơ: ' + (data.error || res.status), 'error'); return; }
+    currentProfileKey = key;
+    await loadProfileList();
+    await loadBrandProfile();
+    showToast(`Đã tạo hồ sơ "${name.trim()}".`, 'success');
+  });
 
-  // ===== Ho so thuong hieu =====
+  document.getElementById('brand-delete-profile-btn').addEventListener('click', async () => {
+    if (!confirm(`Xóa hồ sơ này? Không thể hoàn tác.`)) return;
+    const res = await fetch(`/api/settings/brand-profiles/${currentProfileKey}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Lỗi xóa hồ sơ', 'error'); return; }
+    currentProfileKey = 'phong_menly';
+    await loadProfileList();
+    await loadBrandProfile();
+    showToast('Đã xóa hồ sơ.', 'success');
+  });
+
   async function loadBrandProfile() {
-    const res = await fetch('/api/settings/brand-profile');
+    const res = await fetch(`/api/settings/brand-profile?key=${encodeURIComponent(currentProfileKey)}`);
     const data = await res.json();
     document.getElementById('brand-profile-text').value = data.text || '';
-    if (data.sourceUrl) document.getElementById('brand-channel-input').value = data.sourceUrl;
-    if (data.isDefault) document.getElementById('brand-note').textContent = 'Đang dùng hồ sơ mặc định — dán link kênh và bấm phân tích để AI tự học từ kênh của bạn.';
+    document.getElementById('brand-channel-input').value = data.source_url || '';
+    document.getElementById('brand-note').textContent = data.isDefault ? 'Đang dùng hồ sơ mặc định — dán link kênh và bấm phân tích để AI tự học từ kênh của bạn.' : '';
   }
 
   document.getElementById('brand-analyze-btn').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     const url = document.getElementById('brand-channel-input').value.trim();
     const note = document.getElementById('brand-note');
+    const progressWrap = document.getElementById('brand-progress-wrap');
     if (!url) { note.textContent = 'Dán link kênh trước đã.'; return; }
     btn.disabled = true;
     btn.textContent = 'AI đang phân tích kênh...';
     note.textContent = 'Thường mất 20-40 giây.';
+    const progressTimer = startProgressBar(progressWrap);
     try {
       const res = await fetch('/api/settings/brand-profile/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, key: currentProfileKey }),
       });
       const data = await res.json();
       if (res.ok) {
-        note.textContent = `Đã học từ ${data.videoCount} video của kênh "${data.channelTitle}". Xem và sửa hồ sơ bên dưới nếu cần.`;
+        const unitLabel = data.sourceType === 'video' ? `${data.videoCount} video của kênh` : 'nội dung của';
+        note.textContent = `Đã học từ ${unitLabel} "${data.channelTitle}".`;
         document.getElementById('brand-profile-text').value = data.profile;
+        showToast(`Phân tích xong! Đã cập nhật hồ sơ thương hiệu từ "${data.channelTitle}".`, 'success');
       } else {
         note.textContent = 'Lỗi: ' + (data.error || res.status);
+        showToast('Phân tích lỗi: ' + (data.error || res.status), 'error');
       }
     } catch (err) {
       note.textContent = 'Lỗi kết nối: ' + err.message;
+      showToast('Lỗi kết nối: ' + err.message, 'error');
     }
+    finishProgressBar(progressWrap, progressTimer);
     btn.disabled = false;
     btn.textContent = 'Phân tích và cập nhật hồ sơ thương hiệu';
+  });
+
+  document.getElementById('brand-analyze-fb-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const note = document.getElementById('brand-fb-note');
+    const progressWrap = document.getElementById('brand-fb-progress-wrap');
+    btn.disabled = true;
+    btn.textContent = 'AI đang đọc bài trên Facebook Page...';
+    note.textContent = 'Thường mất 20-40 giây.';
+    const progressTimer = startProgressBar(progressWrap);
+    try {
+      const res = await fetch('/api/settings/brand-profile/analyze-facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: currentProfileKey }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        note.textContent = `Đã học từ ${data.postCount} bài trên Facebook Page.`;
+        document.getElementById('brand-profile-text').value = data.profile;
+        showToast(`Phân tích xong! Đã cập nhật hồ sơ thương hiệu từ ${data.postCount} bài Facebook.`, 'success');
+      } else {
+        note.textContent = 'Lỗi: ' + (data.error || res.status);
+        showToast('Phân tích lỗi: ' + (data.error || res.status), 'error');
+      }
+    } catch (err) {
+      note.textContent = 'Lỗi kết nối: ' + err.message;
+      showToast('Lỗi kết nối: ' + err.message, 'error');
+    }
+    finishProgressBar(progressWrap, progressTimer);
+    btn.disabled = false;
+    btn.textContent = 'Phân tích từ Facebook Page của tôi';
+  });
+
+  document.getElementById('brand-analyze-text-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const note = document.getElementById('brand-text-note');
+    const progressWrap = document.getElementById('brand-text-progress-wrap');
+    const pasted = document.getElementById('brand-paste-text').value.trim();
+    if (!pasted) { note.textContent = 'Dán nội dung trước đã.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'AI đang đọc nội dung...';
+    note.textContent = 'Thường mất 20-40 giây.';
+    const progressTimer = startProgressBar(progressWrap);
+    try {
+      const res = await fetch('/api/settings/brand-profile/analyze-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: pasted, key: currentProfileKey }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        note.textContent = 'Đã cập nhật hồ sơ từ nội dung đã dán.';
+        document.getElementById('brand-profile-text').value = data.profile;
+        showToast('Phân tích xong! Đã cập nhật hồ sơ thương hiệu từ nội dung bạn dán.', 'success');
+      } else {
+        note.textContent = 'Lỗi: ' + (data.error || res.status);
+        showToast('Phân tích lỗi: ' + (data.error || res.status), 'error');
+      }
+    } catch (err) {
+      note.textContent = 'Lỗi kết nối: ' + err.message;
+      showToast('Lỗi kết nối: ' + err.message, 'error');
+    }
+    finishProgressBar(progressWrap, progressTimer);
+    btn.disabled = false;
+    btn.textContent = 'Phân tích nội dung đã dán';
   });
 
   document.getElementById('brand-save-btn').addEventListener('click', async () => {
@@ -152,12 +218,15 @@
     const res = await fetch('/api/settings/brand-profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, key: currentProfileKey }),
     });
     document.getElementById('brand-save-note').textContent = res.ok ? 'Đã lưu hồ sơ.' : 'Lỗi lưu hồ sơ';
   });
 
-  loadBrandProfile();
+  (async () => {
+    await loadProfileList();
+    await loadBrandProfile();
+  })();
 </script>
 
 <%- include('partials/footer') %>

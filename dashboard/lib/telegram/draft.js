@@ -94,9 +94,9 @@ async function pickLibraryImage() {
 
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay
 async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
-  const { getBrandProfile } = require("../brand-profile");
+  const { getBrandProfile, DEFAULT_KEY } = require("../brand-profile");
   const insights = await getContentInsights();
-  const brandProfile = await getBrandProfile();
+  const brandProfile = await getBrandProfile(post.brand_key || DEFAULT_KEY);
   const systemPrompt =
     UYEN_NHI_BRAIN +
     `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +

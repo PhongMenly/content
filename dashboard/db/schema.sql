@@ -65,3 +65,14 @@ CREATE TABLE IF NOT EXISTS bot_kv (
   value      JSONB NOT NULL,
   updated_at BIGINT NOT NULL
 );
+
+-- Nhieu ho so thuong hieu/persona (Phong Menly, Uyen Linh...) thay vi chi 1 ho so duy nhat.
+CREATE TABLE IF NOT EXISTS brand_profiles (
+  key         TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  source_url  TEXT,
+  updated_at  BIGINT NOT NULL
+);
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS brand_key TEXT;

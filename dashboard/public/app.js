@@ -574,6 +574,14 @@ async function initPostDetailPage() {
   if (!detailEl) return;
   const postId = detailEl.dataset.postId;
 
+  async function loadBrandKeyOptions() {
+    const res = await fetch("/api/settings/brand-profiles");
+    const profiles = await res.json();
+    const select = document.getElementById("meta-brand_key");
+    select.innerHTML = `<option value="">(mặc định)</option>` + profiles.map((p) => `<option value="${p.key}">${p.name}</option>`).join("");
+  }
+  await loadBrandKeyOptions();
+
   async function reload() {
     const res = await fetch(`/api/posts/${postId}`);
     const post = await res.json();
@@ -589,6 +597,7 @@ async function initPostDetailPage() {
     document.getElementById("meta-platform").value = post.platform || "";
     document.getElementById("meta-pillar").value = post.pillar || "";
     document.getElementById("meta-cta_type").value = post.cta_type || "";
+    document.getElementById("meta-brand_key").value = post.brand_key || "";
     document.getElementById("post-body").value = post.body || "";
 
     const previewEl = document.getElementById("post-image-preview");
@@ -649,6 +658,7 @@ async function initPostDetailPage() {
         platform: document.getElementById("meta-platform").value,
         pillar: document.getElementById("meta-pillar").value,
         cta_type: document.getElementById("meta-cta_type").value,
+        brand_key: document.getElementById("meta-brand_key").value || null,
       }),
     });
     await reload();

@@ -100,4 +100,33 @@ async function deleteComment(commentId) {
   return data;
 }
 
-module.exports = { postText, postPhoto, getPostInsights, getPostComments, createComment, deleteComment };
+// ===== Doc bai viet cua chinh Page (dung lam ho so thuong hieu) =====
+// Chi doc duoc Page dang quan ly (co FB_PAGE_ACCESS_TOKEN), khong doc duoc Page/profile nguoi khac.
+async function getPageTopPosts(limit = 25) {
+  const pageId = process.env.FB_PAGE_ID;
+  const token = process.env.FB_PAGE_ACCESS_TOKEN;
+  const fields = "id,message,created_time,likes.summary(true).limit(0),comments.summary(true).limit(0),shares";
+  const url = `${GRAPH_URL}/${pageId}/posts?fields=${fields}&limit=${limit}&access_token=${token}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(`Facebook API error: ${data.error.message}`);
+
+  const posts = (data.data || [])
+    .filter((p) => p.message)
+    .map((p) => {
+      const likes = (p.likes && p.likes.summary && p.likes.summary.total_count) || 0;
+      const comments = (p.comments && p.comments.summary && p.comments.summary.total_count) || 0;
+      const shares = (p.shares && p.shares.count) || 0;
+      return {
+        id: p.id,
+        message: p.message,
+        createdTime: p.created_time,
+        engagement: likes + comments + shares,
+      };
+    })
+    .sort((a, b) => b.engagement - a.engagement);
+
+  return posts;
+}
+
+module.exports = { postText, postPhoto, getPostInsights, getPostComments, createComment, deleteComment, getPageTopPosts };

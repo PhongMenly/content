@@ -32,14 +32,53 @@ router.put("/topic-keywords", async (req, res) => {
   }
 });
 
-// ===== Ho so thuong hieu cua Phong =====
+// ===== Ho so thuong hieu (nhieu persona: Phong Menly, Uyen Linh...) =====
 const { fetchChannelData } = require("../lib/reference-channel");
-const { getBrandProfileMeta, setBrandProfile, buildAnalysisSystemPrompt, isAnalysisTooEmpty } = require("../lib/brand-profile");
+const {
+  DEFAULT_KEY,
+  listBrandProfiles,
+  getBrandProfileMeta,
+  setBrandProfile,
+  createBrandProfile,
+  deleteBrandProfileByKey,
+  buildAnalysisSystemPrompt,
+  isAnalysisTooEmpty,
+} = require("../lib/brand-profile");
 const { completeOnce } = require("../lib/telegram/draft");
+
+router.get("/brand-profiles", async (req, res) => {
+  try {
+    res.json(await listBrandProfiles());
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post("/brand-profiles", async (req, res) => {
+  try {
+    const { key, name } = req.body;
+    if (!key || !key.trim()) return res.status(400).json({ error: "Thieu key ho so (vd: uyen_linh)" });
+    if (!name || !name.trim()) return res.status(400).json({ error: "Thieu ten ho so hien thi" });
+    const profile = await createBrandProfile(key.trim(), name.trim());
+    res.status(201).json(profile);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete("/brand-profiles/:key", async (req, res) => {
+  try {
+    const deleted = await deleteBrandProfileByKey(req.params.key);
+    if (!deleted) return res.status(404).json({ error: "Khong tim thay ho so" });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 router.get("/brand-profile", async (req, res) => {
   try {
-    res.json(await getBrandProfileMeta());
+    res.json(await getBrandProfileMeta(req.query.key || DEFAULT_KEY));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -47,10 +86,11 @@ router.get("/brand-profile", async (req, res) => {
 
 router.put("/brand-profile", async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, key } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: "Ho so trong" });
-    const meta = await getBrandProfileMeta();
-    await setBrandProfile(text.trim(), meta.sourceUrl);
+    const profileKey = key || DEFAULT_KEY;
+    const meta = await getBrandProfileMeta(profileKey);
+    await setBrandProfile(profileKey, text.trim(), meta.source_url, meta.name);
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -62,7 +102,8 @@ router.put("/brand-profile", async (req, res) => {
 // Link khac: doc tho HTML server tra ve — trang can dang nhap/render bang JS (FB ca nhan, TikTok...) se doc duoc rat it.
 router.post("/brand-profile/analyze", async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, key } = req.body;
+    const profileKey = key || DEFAULT_KEY;
     if (!url || !url.trim()) return res.status(400).json({ error: "Thieu link" });
     const trimmedUrl = url.trim();
     const isYoutube = /youtube\.com|youtu\.be/.test(trimmedUrl);
@@ -99,7 +140,7 @@ router.post("/brand-profile/analyze", async (req, res) => {
       });
     }
 
-    await setBrandProfile(profileText, trimmedUrl);
+    await setBrandProfile(profileKey, profileText, trimmedUrl);
     res.json({ ok: true, channelTitle: sourceLabel, videoCount: itemCount, sourceType, profile: profileText });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -110,7 +151,8 @@ router.post("/brand-profile/analyze", async (req, res) => {
 // -> luon doc duoc 100% vi khong phu thuoc fetch/JS-render nhu link.
 router.post("/brand-profile/analyze-text", async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, key } = req.body;
+    const profileKey = key || DEFAULT_KEY;
     if (!text || !text.trim()) return res.status(400).json({ error: "Chua dan noi dung nao" });
     const trimmedText = text.trim();
 
@@ -134,7 +176,7 @@ router.post("/brand-profile/analyze-text", async (req, res) => {
       });
     }
 
-    await setBrandProfile(profileText, "pasted-text");
+    await setBrandProfile(profileKey, profileText, "pasted-text");
     res.json({ ok: true, profile: profileText });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -144,6 +186,7 @@ router.post("/brand-profile/analyze-text", async (req, res) => {
 // Phan tich tu chinh Facebook Page dang ket noi (khong can link, dung san token dang dang bai)
 router.post("/brand-profile/analyze-facebook", async (req, res) => {
   try {
+    const profileKey = req.body.key || DEFAULT_KEY;
     const { getPageTopPosts } = require("../lib/facebook");
     const posts = await getPageTopPosts(25);
     if (posts.length === 0) {
@@ -164,7 +207,7 @@ router.post("/brand-profile/analyze-facebook", async (req, res) => {
       });
     }
 
-    await setBrandProfile(profileText, "facebook-page");
+    await setBrandProfile(profileKey, profileText, "facebook-page");
     res.json({ ok: true, postCount: posts.length, profile: profileText });
   } catch (err) {
     res.status(400).json({ error: err.message });
