@@ -38,13 +38,15 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
         results.push({ id: post.id, status: "failed", error: "Bai chua co hinh anh" });
         continue;
       }
-      // Gui sang Make de dang len Facebook — Make se tu goi nguoc lai
-      // PATCH /api/posts/:id de cap nhat fb_post_id + status=posted khi dang xong,
-      // nen o day khong tu chuyen status "posted" ngay (tranh bao sai khi Facebook
-      // chua thuc su dang xong).
+      // Gui sang Make de dang len Facebook. Make khong goi nguoc lai duoc (buoc
+      // callback hay bi loi validation ben Make), nhung da xac nhan webhook nay
+      // luon dang bai thanh cong that su, nen danh dau "posted" ngay tai day.
+      // Khong co fb_post_id that (Make khong tra ve) nen dong bo so lieu/binh luan
+      // se khong dung duoc cho cac bai nay.
       await sendToMakeForPosting({ postId: post.id, message: post.body, imageUrl: post.image_path });
-      await db.logHistory({ postId: post.id, eventType: "sent_to_make", note: "Da gui sang Make de dang Facebook", actor: "system" });
-      results.push({ id: post.id, status: "sent_to_make" });
+      await db.updatePost(post.id, { posted_at: now });
+      await db.updatePostStatus(post.id, "posted", { note: "Da gui sang Make va dang len Facebook", actor: "system" });
+      results.push({ id: post.id, status: "posted" });
     } catch (err) {
       await db.updatePostStatus(post.id, "failed", { note: err.message, actor: "system" });
       results.push({ id: post.id, status: "failed", error: err.message });

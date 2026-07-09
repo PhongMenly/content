@@ -26,7 +26,14 @@ router.get("/", async (req, res, next) => {
     const postedSorted = allPosts
       .filter((p) => p.status === "posted")
       .sort((a, b) => (a.posted_at || a.created_at) - (b.posted_at || b.created_at));
-    const numberMap = new Map(postedSorted.map((p, i) => [p.id, i + 1]));
+    const countByBrand = {};
+    const numberMap = new Map(
+      postedSorted.map((p) => {
+        const brand = p.brand_key || "default";
+        countByBrand[brand] = (countByBrand[brand] || 0) + 1;
+        return [p.id, countByBrand[brand]];
+      })
+    );
 
     const withNumbers = posts.map((p) => ({
       ...p,
@@ -47,10 +54,10 @@ router.get("/:id", async (req, res, next) => {
     let posted_number = null;
     if (post.status === "posted") {
       const allPosts = await db.listPosts({});
-      const postedSorted = allPosts
-        .filter((p) => p.status === "posted")
-        .sort((a, b) => a.created_at - b.created_at);
-      posted_number = postedSorted.findIndex((p) => p.id === post.id) + 1;
+      const sameBrand = allPosts
+        .filter((p) => p.status === "posted" && (p.brand_key || "default") === (post.brand_key || "default"))
+        .sort((a, b) => (a.posted_at || a.created_at) - (b.posted_at || b.created_at));
+      posted_number = sameBrand.findIndex((p) => p.id === post.id) + 1;
     }
 
     res.json({ ...post, history, posted_number });
