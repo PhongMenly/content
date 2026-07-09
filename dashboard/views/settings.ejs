@@ -26,13 +26,6 @@
   <div id="brand-progress-wrap" class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
   <div class="fb-subtext">Link YouTube sẽ đọc chính xác theo lượt xem từng video. Link khác (web, blog...) AI đọc nội dung trang — trang cần đăng nhập hoặc load bằng JavaScript (Facebook cá nhân, TikTok...) có thể đọc được rất ít.</div>
 
-  <div class="settings-row" style="margin-top:8px">
-    <button id="brand-analyze-fb-btn" class="btn">Phân tích từ Facebook Page của tôi</button>
-    <span id="brand-fb-note" class="fb-subtext"></span>
-  </div>
-  <div id="brand-fb-progress-wrap" class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
-  <div class="fb-subtext">Dùng luôn trang Facebook đang kết nối để đăng bài (không cần dán link) — AI đọc các bài cũ, xếp theo tương tác để rút hồ sơ thương hiệu.</div>
-
   <hr style="border:none;border-top:1px solid var(--line, #DFE2E7);margin:16px 0" />
 
   <label class="block-label">Hoặc dán trực tiếp nội dung bất kỳ (copy vài bài từ Facebook cá nhân, tin nhắn, ghi chú...) — luôn đọc được 100%, không phụ thuộc link. Nên dán từ 3-5 bài trở lên (tối thiểu ~400 ký tự) để AI rút hồ sơ chính xác, tránh đoán mò.
@@ -55,25 +48,29 @@
 
 <script>
   // ===== Ho so thuong hieu (nhieu persona) =====
-  let currentProfileKey = 'phong_menly';
+  const LAST_PROFILE_KEY_STORAGE = 'lastBrandProfileKey';
+  let currentProfileKey = localStorage.getItem(LAST_PROFILE_KEY_STORAGE) || 'phong_menly';
+
+  function setCurrentProfileKey(key) {
+    currentProfileKey = key;
+    localStorage.setItem(LAST_PROFILE_KEY_STORAGE, key);
+    document.getElementById('brand-profile-select').value = key;
+    document.getElementById('brand-delete-profile-btn').style.display = key === 'phong_menly' ? 'none' : 'inline-block';
+  }
 
   async function loadProfileList() {
     const res = await fetch('/api/settings/brand-profiles');
     const profiles = await res.json();
     const select = document.getElementById('brand-profile-select');
     select.innerHTML = profiles.map((p) => `<option value="${p.key}">${p.name}</option>`).join('');
-    if (profiles.some((p) => p.key === currentProfileKey)) {
-      select.value = currentProfileKey;
-    } else if (profiles.length > 0) {
-      currentProfileKey = profiles[0].key;
-      select.value = currentProfileKey;
+    if (!profiles.some((p) => p.key === currentProfileKey)) {
+      currentProfileKey = profiles.length > 0 ? profiles[0].key : 'phong_menly';
     }
-    document.getElementById('brand-delete-profile-btn').style.display = currentProfileKey === 'phong_menly' ? 'none' : 'inline-block';
+    setCurrentProfileKey(currentProfileKey);
   }
 
   document.getElementById('brand-profile-select').addEventListener('change', async (e) => {
-    currentProfileKey = e.target.value;
-    document.getElementById('brand-delete-profile-btn').style.display = currentProfileKey === 'phong_menly' ? 'none' : 'inline-block';
+    setCurrentProfileKey(e.target.value);
     await loadBrandProfile();
   });
 
@@ -88,8 +85,8 @@
     });
     const data = await res.json();
     if (!res.ok) { showToast('Lỗi tạo hồ sơ: ' + (data.error || res.status), 'error'); return; }
-    currentProfileKey = key;
     await loadProfileList();
+    setCurrentProfileKey(key);
     await loadBrandProfile();
     showToast(`Đã tạo hồ sơ "${name.trim()}".`, 'success');
   });
@@ -98,7 +95,7 @@
     if (!confirm(`Xóa hồ sơ này? Không thể hoàn tác.`)) return;
     const res = await fetch(`/api/settings/brand-profiles/${currentProfileKey}`, { method: 'DELETE' });
     if (!res.ok) { showToast('Lỗi xóa hồ sơ', 'error'); return; }
-    currentProfileKey = 'phong_menly';
+    setCurrentProfileKey('phong_menly');
     await loadProfileList();
     await loadBrandProfile();
     showToast('Đã xóa hồ sơ.', 'success');
@@ -145,38 +142,6 @@
     finishProgressBar(progressWrap, progressTimer);
     btn.disabled = false;
     btn.textContent = 'Phân tích và cập nhật hồ sơ thương hiệu';
-  });
-
-  document.getElementById('brand-analyze-fb-btn').addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    const note = document.getElementById('brand-fb-note');
-    const progressWrap = document.getElementById('brand-fb-progress-wrap');
-    btn.disabled = true;
-    btn.textContent = 'AI đang đọc bài trên Facebook Page...';
-    note.textContent = 'Thường mất 20-40 giây.';
-    const progressTimer = startProgressBar(progressWrap);
-    try {
-      const res = await fetch('/api/settings/brand-profile/analyze-facebook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: currentProfileKey }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        note.textContent = `Đã học từ ${data.postCount} bài trên Facebook Page.`;
-        document.getElementById('brand-profile-text').value = data.profile;
-        showToast(`Phân tích xong! Đã cập nhật hồ sơ thương hiệu từ ${data.postCount} bài Facebook.`, 'success');
-      } else {
-        note.textContent = 'Lỗi: ' + (data.error || res.status);
-        showToast('Phân tích lỗi: ' + (data.error || res.status), 'error');
-      }
-    } catch (err) {
-      note.textContent = 'Lỗi kết nối: ' + err.message;
-      showToast('Lỗi kết nối: ' + err.message, 'error');
-    }
-    finishProgressBar(progressWrap, progressTimer);
-    btn.disabled = false;
-    btn.textContent = 'Phân tích từ Facebook Page của tôi';
   });
 
   document.getElementById('brand-analyze-text-btn').addEventListener('click', async (e) => {

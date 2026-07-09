@@ -183,37 +183,6 @@ router.post("/brand-profile/analyze-text", async (req, res) => {
   }
 });
 
-// Phan tich tu chinh Facebook Page dang ket noi (khong can link, dung san token dang dang bai)
-router.post("/brand-profile/analyze-facebook", async (req, res) => {
-  try {
-    const profileKey = req.body.key || DEFAULT_KEY;
-    const { getPageTopPosts } = require("../lib/facebook");
-    const posts = await getPageTopPosts(25);
-    if (posts.length === 0) {
-      return res.status(400).json({ error: "Page chua co bai viet nao co noi dung de phan tich" });
-    }
-
-    const postLines = posts
-      .map((p) => `- "${p.message.slice(0, 300).replace(/\n+/g, " ")}" (${p.engagement} tuong tac)`)
-      .join("\n");
-
-    const profileText = await completeOnce(buildAnalysisSystemPrompt(), `Facebook Page cua Phong\n\nDanh sach bai dang (xep theo tuong tac):\n${postLines}`);
-
-    if (isAnalysisTooEmpty(profileText)) {
-      return res.status(422).json({
-        error: "Khong doc duoc noi dung du de phan tich. Ho so thuong hieu cu van duoc giu nguyen, khong bi ghi de.",
-        profile: profileText,
-        tooEmpty: true,
-      });
-    }
-
-    await setBrandProfile(profileKey, profileText, "facebook-page");
-    res.json({ ok: true, postCount: posts.length, profile: profileText });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
 // ===== Kenh mau de AI hoc theo =====
 const { analyzeChannel, getReferenceChannel } = require("../lib/reference-channel");
 
