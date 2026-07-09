@@ -1,56 +1,9 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const { proposeWeeklyTopics, getTopicKeywords, setTopicKeywords } = require("../lib/telegram/topic-flow");
 const { sendMessage } = require("../lib/telegram/telegram-api");
 
 const OWNER_CHAT_ID = 8481163556;
 const router = express.Router();
-const FB_BOT_DIR = path.join(__dirname, "..", "..", "facebook-bot");
-const GROUPS_FILE = path.join(FB_BOT_DIR, "groups.json");
-
-function readGroupsConfig() {
-  if (!fs.existsSync(GROUPS_FILE)) {
-    return { maxPerRun: 5, delaySecondsMin: 45, delaySecondsMax: 90, groups: [] };
-  }
-  return JSON.parse(fs.readFileSync(GROUPS_FILE, "utf-8"));
-}
-
-router.get("/groups", (req, res) => {
-  const config = readGroupsConfig();
-  const loggedIn = fs.existsSync(path.join(FB_BOT_DIR, ".browser-profile"));
-  res.json({ ...config, fbLoggedIn: loggedIn });
-});
-
-router.put("/groups", (req, res) => {
-  const { groups, maxPerRun, autoShareAfterPost, shareDelayMinutes } = req.body;
-  const config = readGroupsConfig();
-  if (Array.isArray(groups)) {
-    config.groups = groups
-      .map((g) => String(g).trim())
-      .filter((g) => /^https:\/\/(www\.)?facebook\.com\/groups\//.test(g));
-  }
-  if (maxPerRun) config.maxPerRun = Math.min(Math.max(parseInt(maxPerRun, 10) || 5, 1), 10);
-  if (autoShareAfterPost !== undefined) config.autoShareAfterPost = autoShareAfterPost === true;
-  if (shareDelayMinutes) config.shareDelayMinutes = Math.min(Math.max(parseInt(shareDelayMinutes, 10) || 20, 5), 120);
-  fs.writeFileSync(GROUPS_FILE, JSON.stringify(config, null, 2), "utf-8");
-  res.json({ ok: true, saved: config.groups.length });
-});
-
-router.get("/share-log", (req, res) => {
-  const resultFile = path.join(FB_BOT_DIR, "logs", "last-share-result.json");
-  let lastResult = null;
-  if (fs.existsSync(resultFile)) {
-    lastResult = JSON.parse(fs.readFileSync(resultFile, "utf-8"));
-  }
-  const cronLogFile = path.join(__dirname, "..", "logs", "cron-out.log");
-  let cronTail = [];
-  if (fs.existsSync(cronLogFile)) {
-    const lines = fs.readFileSync(cronLogFile, "utf-8").trim().split("\n");
-    cronTail = lines.slice(-20);
-  }
-  res.json({ lastResult, cronTail });
-});
 
 // ===== Tu khoa dinh huong y tuong =====
 router.get("/topic-keywords", async (req, res) => {
@@ -76,7 +29,7 @@ router.put("/topic-keywords", async (req, res) => {
 
 // ===== Ho so thuong hieu cua Phong =====
 const { fetchChannelData } = require("../lib/reference-channel");
-const { getBrandProfileMeta, setBrandProfile } = require("../lib/brand-profile");
+const { getBrandProfileMeta, setBrandProfile, buildAnalysisSystemPrompt, isAnalysisTooEmpty } = require("../lib/brand-profile");
 const { completeOnce } = require("../lib/telegram/draft");
 
 router.get("/brand-profile", async (req, res) => {
@@ -99,32 +52,115 @@ router.put("/brand-profile", async (req, res) => {
   }
 });
 
-// Dan link kenh CUA PHONG -> AI doc video, tu rut ra ho so thuong hieu
+// Dan 1 link BAT KY (kenh YouTube hoac bat ky trang web nao) -> AI doc va rut ra ho so thuong hieu.
+// Link YouTube dung duong rieng (RSS co so lieu luot xem, chinh xac hon).
+// Link khac: doc tho HTML server tra ve — trang can dang nhap/render bang JS (FB ca nhan, TikTok...) se doc duoc rat it.
 router.post("/brand-profile/analyze", async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url || !/youtube\.com|youtu\.be/.test(url)) {
-      return res.status(400).json({ error: "Hien moi ho tro link kenh YouTube" });
+    if (!url || !url.trim()) return res.status(400).json({ error: "Thieu link" });
+    const trimmedUrl = url.trim();
+    const isYoutube = /youtube\.com|youtu\.be/.test(trimmedUrl);
+
+    let sourceLabel, contentBlock, itemCount, sourceType;
+
+    if (isYoutube) {
+      const data = await fetchChannelData(trimmedUrl);
+      contentBlock = data.videos
+        .map((v) => `- "${v.title}" (${v.views} luot xem)${v.description ? `\n  Mo ta: ${v.description.slice(0, 200)}` : ""}`)
+        .join("\n");
+      sourceLabel = `Kenh YouTube: ${data.channelTitle}`;
+      itemCount = data.videos.length;
+      sourceType = "video";
+    } else {
+      const { fetchGenericPageText } = require("../lib/generic-page");
+      const page = await fetchGenericPageText(trimmedUrl);
+      contentBlock =
+        `Tieu de trang: ${page.title}\n` +
+        (page.metaDesc ? `Mo ta: ${page.metaDesc}\n` : "") +
+        `Noi dung trang (trich):\n${page.text}`;
+      sourceLabel = `Trang web: ${page.title || trimmedUrl}`;
+      itemCount = 1;
+      sourceType = "trang";
     }
-    const data = await fetchChannelData(url.trim());
-    const videoLines = data.videos
-      .map((v) => `- "${v.title}" (${v.views} luot xem)${v.description ? `\n  Mo ta: ${v.description.slice(0, 200)}` : ""}`)
+
+    const profileText = await completeOnce(buildAnalysisSystemPrompt(), `${sourceLabel}\n\n${contentBlock}`);
+
+    if (isAnalysisTooEmpty(profileText)) {
+      return res.status(422).json({
+        error: "Trang nay khong doc duoc noi dung that (co the can dang nhap hoac render bang JavaScript). Ho so thuong hieu cu van duoc giu nguyen, khong bi ghi de.",
+        profile: profileText,
+        tooEmpty: true,
+      });
+    }
+
+    await setBrandProfile(profileText, trimmedUrl);
+    res.json({ ok: true, channelTitle: sourceLabel, videoCount: itemCount, sourceType, profile: profileText });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Dan TRUC TIEP noi dung tho (bat ky nguon nao — Facebook ca nhan, tin nhan, ghi chu...)
+// -> luon doc duoc 100% vi khong phu thuoc fetch/JS-render nhu link.
+router.post("/brand-profile/analyze-text", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: "Chua dan noi dung nao" });
+    const trimmedText = text.trim();
+
+    // AI de "bia" ra 11 muc nghe hop ly du input rat ngan (khong bao gio tu nhan
+    // "chua du du lieu" neu chi thieu it) — phai chan tu truoc bang do dai toi thieu,
+    // khong the chi dua vao isAnalysisTooEmpty() sau khi da goi AI.
+    const MIN_LENGTH = 400;
+    if (trimmedText.length < MIN_LENGTH) {
+      return res.status(400).json({
+        error: `Noi dung hoi ngan (${trimmedText.length} ky tu, can toi thieu ${MIN_LENGTH}). Dan them vai bai/doan van nua de AI rut ho so chinh xac hon, tranh doan mo.`,
+      });
+    }
+
+    const profileText = await completeOnce(buildAnalysisSystemPrompt(), `Noi dung do Phong tu dan vao:\n\n${trimmedText.slice(0, 8000)}`);
+
+    if (isAnalysisTooEmpty(profileText)) {
+      return res.status(422).json({
+        error: "Noi dung dan vao qua it hoac khong ro rang de rut ra ho so. Ho so thuong hieu cu van duoc giu nguyen.",
+        profile: profileText,
+        tooEmpty: true,
+      });
+    }
+
+    await setBrandProfile(profileText, "pasted-text");
+    res.json({ ok: true, profile: profileText });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Phan tich tu chinh Facebook Page dang ket noi (khong can link, dung san token dang dang bai)
+router.post("/brand-profile/analyze-facebook", async (req, res) => {
+  try {
+    const { getPageTopPosts } = require("../lib/facebook");
+    const posts = await getPageTopPosts(25);
+    if (posts.length === 0) {
+      return res.status(400).json({ error: "Page chua co bai viet nao co noi dung de phan tich" });
+    }
+
+    const postLines = posts
+      .map((p) => `- "${p.message.slice(0, 300).replace(/\n+/g, " ")}" (${p.engagement} tuong tac)`)
       .join("\n");
 
-    const systemPrompt =
-      `Ban la chuyen gia phan tich thuong hieu ca nhan. Nhiem vu: doc danh sach video cua kenh YouTube va rut ra HO SO THUONG HIEU cua chu kenh.\n` +
-      `Xuat ra dang gach dau dong tieng Viet, ngan gon, moi muc 1-2 dong, gom dung 6 muc:\n` +
-      `- Dinh vi: (chu kenh la ai, lam gi, phong cach)\n` +
-      `- Chu de chinh: (3-5 chu de kenh hay lam)\n` +
-      `- Tu khoa: (5-10 tu khoa xuat hien nhieu)\n` +
-      `- San pham/dich vu: (nhung gi kenh dang ban hoac quang ba)\n` +
-      `- Giong dieu: (cach dat tieu de, cach noi chuyen)\n` +
-      `- Cong thuc tieu de an khach: (rut tu cac video nhieu view nhat)\n` +
-      `Khong giai thich gi them ngoai 6 muc tren.`;
+    const profileText = await completeOnce(buildAnalysisSystemPrompt(), `Facebook Page cua Phong\n\nDanh sach bai dang (xep theo tuong tac):\n${postLines}`);
 
-    const profileText = await completeOnce(systemPrompt, `Kenh: ${data.channelTitle}\nDanh sach video:\n${videoLines}`);
-    await setBrandProfile(profileText, url.trim());
-    res.json({ ok: true, channelTitle: data.channelTitle, videoCount: data.videos.length, profile: profileText });
+    if (isAnalysisTooEmpty(profileText)) {
+      return res.status(422).json({
+        error: "Khong doc duoc noi dung du de phan tich. Ho so thuong hieu cu van duoc giu nguyen, khong bi ghi de.",
+        profile: profileText,
+        tooEmpty: true,
+      });
+    }
+
+    await setBrandProfile(profileText, "facebook-page");
+    res.json({ ok: true, postCount: posts.length, profile: profileText });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

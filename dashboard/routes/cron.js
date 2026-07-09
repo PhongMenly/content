@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db/client");
-const { postText, postPhoto, getPostInsights } = require("../lib/facebook");
+const { getPostInsights } = require("../lib/facebook");
+const { sendToMakeForPosting } = require("../lib/make");
 const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
 const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
 const { generateReport } = require("../lib/telegram/insights");
@@ -37,12 +38,13 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
         results.push({ id: post.id, status: "failed", error: "Bai chua co hinh anh" });
         continue;
       }
-      const fbResult = await postPhoto({ message: post.body, imageUrl: post.image_path });
-      // Uu tien post_id (ID bai viet that) — dang anh thi .id chi la ID cua tam anh
-      const fbPostId = fbResult.post_id || fbResult.id;
-      await db.updatePost(post.id, { fb_post_id: fbPostId, posted_at: now });
-      await db.updatePostStatus(post.id, "posted", { note: `Da dang len Facebook, id: ${fbPostId}`, actor: "system" });
-      results.push({ id: post.id, status: "posted", fbPostId });
+      // Gui sang Make de dang len Facebook — Make se tu goi nguoc lai
+      // PATCH /api/posts/:id de cap nhat fb_post_id + status=posted khi dang xong,
+      // nen o day khong tu chuyen status "posted" ngay (tranh bao sai khi Facebook
+      // chua thuc su dang xong).
+      await sendToMakeForPosting({ postId: post.id, message: post.body, imageUrl: post.image_path });
+      await db.logHistory({ postId: post.id, eventType: "sent_to_make", note: "Da gui sang Make de dang Facebook", actor: "system" });
+      results.push({ id: post.id, status: "sent_to_make" });
     } catch (err) {
       await db.updatePostStatus(post.id, "failed", { note: err.message, actor: "system" });
       results.push({ id: post.id, status: "failed", error: err.message });

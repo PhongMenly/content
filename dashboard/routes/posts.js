@@ -1,8 +1,5 @@
 const express = require("express");
 const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
-const { spawn } = require("child_process");
 const db = require("../db/client");
 const { toUnixTime, nextAvailableSlot } = require("../lib/schedule");
 const { uploadImageBuffer } = require("../lib/blob");
@@ -188,53 +185,6 @@ router.delete("/:id", async (req, res, next) => {
     if (!post) return res.status(404).json({ error: "Khong tim thay bai viet" });
     await db.deletePost(post.id);
     res.json({ ok: true, deleted: post.id });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Chia se bai len cac Facebook Group qua browser automation (chi chay tren may local)
-const FB_BOT_DIR = path.join(__dirname, "..", "..", "facebook-bot");
-
-router.post("/:id/share-groups", async (req, res, next) => {
-  try {
-    const post = await db.getPost(req.params.id);
-    if (!post) return res.status(404).json({ error: "Khong tim thay bai viet" });
-    if (!post.body) return res.status(400).json({ error: "Bai chua co noi dung" });
-
-    const groupsFile = path.join(FB_BOT_DIR, "groups.json");
-    const profileDir = path.join(FB_BOT_DIR, ".browser-profile");
-    if (!fs.existsSync(groupsFile)) {
-      return res.status(400).json({ error: "Chua co file groups.json trong facebook-bot" });
-    }
-    const config = JSON.parse(fs.readFileSync(groupsFile, "utf-8"));
-    if (!config.groups || config.groups.length === 0) {
-      return res.status(400).json({ error: "groups.json chua co link nhom nao. Them link nhom vao truoc." });
-    }
-    if (!fs.existsSync(profileDir)) {
-      return res.status(400).json({
-        error: 'Chua dang nhap Facebook cho bot. Chay 1 lan: node share-groups.js --setup (trong thu muc facebook-bot)',
-      });
-    }
-
-    const logsDir = path.join(FB_BOT_DIR, "logs");
-    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
-    const messageFile = path.join(logsDir, `share-message-${post.id}.txt`);
-    fs.writeFileSync(messageFile, post.body, "utf-8");
-
-    const runLog = fs.openSync(path.join(logsDir, `share-run-${post.id}-${Date.now()}.log`), "a");
-    const child = spawn(process.execPath, ["share-groups.js", "--message-file", messageFile], {
-      cwd: FB_BOT_DIR,
-      detached: true,
-      stdio: ["ignore", runLog, runLog],
-    });
-    child.unref();
-
-    await db.logHistory({ postId: post.id, eventType: "share_groups_started", note: `${config.groups.length} nhom`, actor: "phong" });
-    res.json({
-      ok: true,
-      message: `Đang chia sẻ lên ${Math.min(config.groups.length, config.maxPerRun || 5)} nhóm ở chế độ nền. Xem kết quả trong facebook-bot/logs.`,
-    });
   } catch (err) {
     next(err);
   }
