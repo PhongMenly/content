@@ -79,8 +79,8 @@ function getAutomationJobs() {
     },
     {
       name: "Báo cáo kết quả cuối ngày",
-      desc: "21:30 tối, gửi tổng kết qua Telegram: hôm nay đăng gì + số liệu, cảnh báo bài lỗi, lịch ngày mai, kho bài còn bao nhiêu, việc gì đang chờ bạn duyệt.",
-      group: "Báo cáo", mode: "scheduled", freq: "21:30 hàng ngày", next: nextDailyVN(21, 30),
+      desc: "22:30 tối, gửi tổng kết qua Telegram: hôm nay đăng gì + số liệu, cảnh báo bài lỗi, lịch ngày mai, kho bài còn bao nhiêu, việc gì đang chờ bạn duyệt.",
+      group: "Báo cáo", mode: "scheduled", freq: "22:30 hàng ngày", next: nextDailyVN(22, 30),
     },
     {
       name: "Nhi tự học cuối ngày",
