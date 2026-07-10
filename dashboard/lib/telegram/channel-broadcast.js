@@ -8,8 +8,19 @@ const { sendMessage, sendPhoto } = require("./telegram-api");
 
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "-1004352564538";
 
+// sendMessage/sendPhoto tra ve JSON cua Telegram ke ca khi loi — phai tu kiem tra,
+// khong duoc bao "thanh cong" khi Telegram tu choi (vd bot chua duoc them vao kenh)
+function assertOk(result, action) {
+  if (!result || result.ok !== true) {
+    const desc = (result && result.description) || "khong ro nguyen nhan";
+    throw new Error(`Telegram ${action} vao kenh that bai: ${desc}. Kiem tra bot da la Admin cua kenh chua.`);
+  }
+}
+
 async function sendToChannel(text) {
-  return sendMessage(CHANNEL_ID, text);
+  const result = await sendMessage(CHANNEL_ID, text);
+  assertOk(result, "gui tin");
+  return result;
 }
 
 async function broadcastPostToChannel(post) {
@@ -18,7 +29,7 @@ async function broadcastPostToChannel(post) {
   if (post.image_path) {
     // Caption anh Telegram gioi han 1024 ky tu
     const caption = body.length > 1000 ? body.slice(0, 990).trim() + "..." : body;
-    await sendPhoto(CHANNEL_ID, post.image_path, caption);
+    assertOk(await sendPhoto(CHANNEL_ID, post.image_path, caption), "gui anh");
   } else {
     await sendToChannel(body);
   }
