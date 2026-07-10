@@ -150,6 +150,26 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
+// Viet full bai cho 1 y tuong qua dung pipeline persona (dung khi can chay lai tu dashboard/API)
+router.post("/:id/draft", async (req, res) => {
+  try {
+    const post = await db.getPost(req.params.id);
+    if (!post) return res.status(404).json({ error: "Khong tim thay bai viet" });
+    if (post.status !== "idea") return res.status(400).json({ error: "Chi viet duoc tu bai o trang thai y tuong" });
+
+    const { draftTopic } = require("../lib/telegram/draft");
+    const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
+    const OWNER = 8481163556;
+    const updated = await draftTopic(post, {
+      sendMessage: (t) => sendMessage(OWNER, t),
+      sendPhoto: (url, caption) => sendPhoto(OWNER, url, caption),
+    });
+    res.json({ ok: true, id: updated.id, status: updated.status });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // ===== Quan ly binh luan cua bai da dang =====
 router.get("/:id/comments", async (req, res) => {
   try {

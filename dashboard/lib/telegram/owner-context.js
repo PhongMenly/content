@@ -85,6 +85,20 @@ async function getOwnerContext() {
 
   lines.push(`Dashboard: https://phong-menly-dashboard.vercel.app`);
 
+  // Ho so persona Uyen Linh — trang page hien tai. Ke ca khi CHAT/viet nhap,
+  // noi dung cho Linh phai theo ho so nay, khong duoc dung chat lieu Phong Menly.
+  try {
+    const { getBrandProfile } = require("../brand-profile");
+    const linhProfile = await getBrandProfile("uyen_linh");
+    lines.push(
+      "\n===== HO SO NHAN VAT UYEN LINH (page hien tai) =====\n" +
+        linhProfile +
+        "\nQUY TAC VIET CHO UYEN LINH: moi noi dung viet cho page/persona Uyen Linh — KE CA viet nhap ngay trong chat — PHAI theo dung ho so tren: giong nu nhe nhang, 80-200 tu, KHONG thuat ngu cong nghe, KHONG nhac san pham cua Phong (KOL AI System, workshop...), KHONG giong chuyen gia. Neu anh Phong nho viet bai, tot nhat huong dan anh dung reply 'chon N' hoac /ytuong de bai di qua dung quy trinh va ho so."
+    );
+  } catch (e) {
+    // bo qua neu chua co ho so
+  }
+
   // Ghi chu hien trang do Phong tu cap nhat — nguon su that cao nhat
   const notes = await getSystemNotes();
   const notesBlock = formatNotesBlock(notes);
