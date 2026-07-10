@@ -27,7 +27,7 @@ Cau truc ap dung ngam (khong ghi nhan de ra):
 4. Goc nhin ca nhan / du doan xu huong
 5. CTA tu nhien o cuoi (cau hoi kich thich binh luan, khong ep buoc, khong dung "tha tim nhe")
 
-Do dai 200-500 tu. Cau ngan, xuong dong thuong xuyen de de doc tren mobile. Emoji dung vua phai, khong spam.`;
+Do dai va giong dieu: neu HO SO NHAN VAT co quy dinh rieng (do dai, cach xung ho, dieu cam) thi UU TIEN TUYET DOI theo ho so. Mac dinh: 200-500 tu. Cau ngan, xuong dong thuong xuyen de de doc tren mobile. Emoji dung vua phai, khong spam.`;
 
 function formatInsightsContext(insights) {
   if (!insights.enough_data) return "";

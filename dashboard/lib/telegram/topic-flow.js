@@ -18,10 +18,10 @@ const PILLARS_BY_KEY = {
     "Video va Content AI",
   ],
   uyen_linh: [
-    "Cong nghe & Cuoc song",
-    "Kiem tien & Doc lap tai chinh",
-    "Ve dep & Ban linh",
-    "Trai nghiem & Tu do",
+    "Ve dep & Phong cach",
+    "Du lich & Khoanh khac",
+    "Tam su & Tu tin",
+    "Song tu do nhe nhang",
   ],
 };
 
