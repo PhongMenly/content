@@ -6,7 +6,8 @@
     { "path": "/api/cron/telegram-daily-report", "schedule": "0 1 * * *" },
     { "path": "/api/cron/db-backup", "schedule": "0 19 * * *" },
     { "path": "/api/cron/generate-topics", "schedule": "0 1 * * 1" },
-    { "path": "/api/cron/ai-news-digest", "schedule": "30 0 * * *" }
+    { "path": "/api/cron/ai-news-digest", "schedule": "30 0 * * *" },
+    { "path": "/api/cron/self-learn", "schedule": "0 14 * * *" }
   ],
   "functions": {
     "server.js": { "maxDuration": 60 }

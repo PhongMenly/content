@@ -120,6 +120,19 @@ router.get("/telegram-daily-report", checkCronAuth, async (req, res) => {
   }
 });
 
+// Nhi tu hoc cuoi ngay: rut bai hoc tu hoi thoai + hanh dong, nap vao nao cho ngay mai
+router.get("/self-learn", checkCronAuth, async (req, res) => {
+  try {
+    const { runDailySelfLearn } = require("../lib/telegram/self-learn");
+    const result = await runDailySelfLearn({
+      sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Ban tin AI hang ngay cho kenh cong dong
 router.get("/ai-news-digest", checkCronAuth, async (req, res) => {
   try {

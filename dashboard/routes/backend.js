@@ -78,6 +78,11 @@ function getAutomationJobs() {
       group: "An toàn", mode: "scheduled", freq: "2:00 sáng hàng ngày", next: nextDailyVN(2, 0),
     },
     {
+      name: "Nhi tự học cuối ngày",
+      desc: "21h tối, Nhi đọc lại hội thoại với bạn và nhật ký làm việc trong ngày, tự rút bài học mới (sở thích, điều bị nhắc, quy tắc mới) rồi áp dụng từ hôm sau. Xem bộ nhớ tự học bằng lệnh /tuhoc trên Telegram.",
+      group: "Tự nâng cấp", mode: "scheduled", freq: "21:00 hàng ngày", next: nextDailyVN(21, 0),
+    },
+    {
       name: "AI đề xuất chủ đề tuần (Phong Menly)",
       desc: "Sáng thứ 2 hàng tuần, AI đề xuất 5 chủ đề mới cho thương hiệu Phong Menly.",
       group: "Ý tưởng", mode: "scheduled", freq: "8:00 sáng thứ 2", next: nextWeeklyVN(1, 8, 0),

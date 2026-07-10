@@ -89,7 +89,7 @@ async function handleMessage(message) {
 
   if (text === "/help") {
     const ownerCmds = isOwner
-      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n/hientrang — xem ghi chú hiện trạng\n/hientrang <nội dung> — thêm ghi chú hiện trạng cho Nhi\n/hientrang xoa — xóa hết ghi chú\n`
+      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n/hientrang — xem/thêm ghi chú hiện trạng\n/tuhoc — xem những điều Nhi tự học từ anh (21h tự học mỗi tối)\n`
       : "";
     await sendMessage(targetChat,
       `Nhắn tự nhiên là được. Hoặc dùng:\n\n` +
@@ -98,6 +98,29 @@ async function handleMessage(message) {
       `/lich — lịch content tuần\n` +
       ownerCmds
     );
+    return;
+  }
+
+  const tuhocMatch = text.match(/^\/tuhoc(?:\s+(xoa|xóa))?$/i);
+  if (tuhocMatch) {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    const { getLessons, saveLessons } = require("../lib/telegram/self-learn");
+    try {
+      if (tuhocMatch[1]) {
+        await saveLessons([]);
+        await sendMessage(targetChat, "Da xoa het bo nho tu hoc. Nhi se hoc lai tu dau.");
+      } else {
+        const lessons = await getLessons();
+        await sendMessage(targetChat, lessons.length
+          ? "NHUNG DIEU NHI DA TU HOC:\n" + lessons.map((l, i) => `${i + 1}. ${l.text || l}${l.learnedAt ? ` (${l.learnedAt})` : ""}`).join("\n")
+          : "Nhi chua tu hoc duoc gi — moi 21h toi Nhi se tu rut bai hoc tu hoi thoai trong ngay.");
+      }
+    } catch (err) {
+      await sendMessage(targetChat, "Loi bo nho tu hoc: " + err.message);
+    }
     return;
   }
 

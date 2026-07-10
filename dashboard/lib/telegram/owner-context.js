@@ -99,6 +99,15 @@ async function getOwnerContext() {
     // bo qua neu chua co ho so
   }
 
+  // Bai hoc Nhi tu hoc moi ngay tu hoi thoai voi Phong
+  try {
+    const { getLessons, formatLessonsBlock } = require("./self-learn");
+    const lessonsBlock = formatLessonsBlock(await getLessons());
+    if (lessonsBlock) lines.push(lessonsBlock);
+  } catch (e) {
+    // bo qua neu chua co
+  }
+
   // Ghi chu hien trang do Phong tu cap nhat — nguon su that cao nhat
   const notes = await getSystemNotes();
   const notesBlock = formatNotesBlock(notes);
