@@ -89,7 +89,7 @@ async function handleMessage(message) {
 
   if (text === "/help") {
     const ownerCmds = isOwner
-      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n`
+      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n/hientrang — xem ghi chú hiện trạng\n/hientrang <nội dung> — thêm ghi chú hiện trạng cho Nhi\n/hientrang xoa — xóa hết ghi chú\n`
       : "";
     await sendMessage(targetChat,
       `Nhắn tự nhiên là được. Hoặc dùng:\n\n` +
@@ -98,6 +98,33 @@ async function handleMessage(message) {
       `/lich — lịch content tuần\n` +
       ownerCmds
     );
+    return;
+  }
+
+  const hientrangMatch = text.match(/^\/hientrang(?:\s+([\s\S]+))?$/i);
+  if (hientrangMatch) {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    const { getSystemNotes, appendSystemNote, clearSystemNotes } = require("../lib/telegram/system-notes");
+    const arg = (hientrangMatch[1] || "").trim();
+    try {
+      if (!arg) {
+        const notes = await getSystemNotes();
+        await sendMessage(targetChat, notes.length
+          ? "GHI CHU HIEN TRANG:\n" + notes.map((n) => "- " + n).join("\n")
+          : "Chua co ghi chu hien trang nao. Them bang: /hientrang <noi dung>");
+      } else if (/^(xoa|xóa)$/i.test(arg)) {
+        await clearSystemNotes();
+        await sendMessage(targetChat, "Da xoa het ghi chu hien trang.");
+      } else {
+        await appendSystemNote(arg);
+        await sendMessage(targetChat, "Da ghi nho. Tu gio Nhi se tra loi dua tren hien trang nay.");
+      }
+    } catch (err) {
+      await sendMessage(targetChat, "Loi ghi chu: " + err.message);
+    }
     return;
   }
 
