@@ -63,9 +63,9 @@ function getAutomationJobs() {
       group: "Kênh cộng đồng", mode: "scheduled", freq: "7:30 sáng hàng ngày", next: nextDailyVN(7, 30),
     },
     {
-      name: "AI đề xuất chủ đề cho Uyên Linh",
-      desc: "Mỗi sáng AI nghĩ 3 chủ đề mới theo hồ sơ Uyên Linh và gửi danh sách qua Telegram để bạn chọn.",
-      group: "Ý tưởng", mode: "scheduled", freq: "8:00 sáng hàng ngày", next: nextDailyVN(8, 0),
+      name: "Máy giữ kho bài Uyên Linh",
+      desc: "Trực 24/7, giữ kho nội dung (ý tưởng + chờ duyệt + đã lên lịch) luôn tối thiểu 6 bài. Đăng bớt bài là AI tự đề xuất chủ đề bù ngay và gửi Telegram cho bạn chọn — không chờ đến sáng.",
+      group: "Ý tưởng", mode: "watch", freq: "quét 5 phút/lần", next: nextInterval(5),
     },
     {
       name: "Báo cáo insight khách hàng",

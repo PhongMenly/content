@@ -94,7 +94,17 @@ router.get("/telegram-review-check", checkCronAuth, async (req, res) => {
     const resultsSent = await checkForPostResults({
       sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
     });
-    res.json({ draftsSent, resultsSent });
+
+    // May giu kho bai: kho Uyen Linh tut duoi muc toi thieu -> AI de xuat bu ngay
+    let pipeline = null;
+    try {
+      const { ensureTopicPipeline } = require("../lib/telegram/pipeline-guard");
+      pipeline = await ensureTopicPipeline({ sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text) });
+    } catch (pErr) {
+      console.error("[pipeline-guard] Loi:", pErr.message);
+    }
+
+    res.json({ draftsSent, resultsSent, pipeline });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
