@@ -67,6 +67,23 @@ async function fetchFreshNews(maxItems = 8) {
   return fresh.slice(0, maxItems);
 }
 
+// RSS nhieu nguon da bo anh -> vao trang bai viet lay anh dai dien og:image
+async function getArticleImage(item) {
+  if (item.image) return item.image;
+  try {
+    const res = await fetch(item.link, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const m =
+      html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i) ||
+      html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i) ||
+      html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i);
+    return m ? m[1].replace(/&amp;/g, "&") : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function markSent(items) {
   const sent = (await db.getKv(SENT_KEY)) || { links: [] };
   const links = sent.links.concat(items.map((i) => i.link)).slice(-300);
@@ -87,7 +104,7 @@ async function sendDailyDigest() {
   const systemPrompt =
     `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm affiliate marketing, xây doanh nghiệp 1 người, làm AI Influencer — họ cần tin để HÀNH ĐỘNG, không cần tin để biết.\n` +
     `CHỦ ĐỀ ƯU TIÊN khi chọn tin (theo thứ tự): (1) affiliate marketing và kiếm tiền online; (2) xây dựng doanh nghiệp 1 người bằng AI; (3) AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng; (4) động thái của các công ty: Higgsfield, Topview, Lovable, Anthropic/Claude, Google/Gemini, OpenAI/ChatGPT; (5) gọi vốn và khởi nghiệp AI. Tin không dính chủ đề nào thì chỉ chọn khi thực sự lớn.\n` +
-    `Từ danh sách tin được đánh số, chọn 4-5 tin theo tiêu chí trên.\n` +
+    `Từ danh sách tin được đánh số, chọn DUY NHẤT 1 TIN QUAN TRỌNG NHẤT theo tiêu chí trên.\n` +
     `Với MỖI tin, phần "insight" phải SÂU nhưng NGẮN GỌN: đúng 2-3 câu súc tích, đi thẳng vào việc người làm affiliate/doanh nghiệp 1 người/AI influencer TẬN DỤNG được gì NGAY (cách làm cụ thể, use-case), kèm cơ hội hoặc rủi ro nếu đáng nói. Không câu mở đầu vòng vo, không lặp lại tiêu đề. CẤM viết chung chung kiểu "giúp tiết kiệm thời gian", "nâng cao hiệu quả". Insight tối đa 300 ký tự.\n` +
     `BẮT BUỘC viết TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ. KHÔNG chèn link/URL. Không markdown.\n` +
     `Trả về DUY NHẤT 1 JSON hợp lệ đúng định dạng:\n` +
@@ -97,42 +114,27 @@ async function sendDailyDigest() {
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Khong parse duoc ban tin tu AI: " + raw.slice(0, 200));
   const digest = JSON.parse(jsonMatch[0]);
-  const items = (digest.items || []).slice(0, 5);
-  if (items.length === 0) throw new Error("AI khong chon duoc tin nao");
+  const item = (digest.items || [])[0];
+  if (!item) throw new Error("AI khong chon duoc tin nao");
+  const src = news[item.index - 1];
+  if (!src) throw new Error("Tin AI chon khong khop danh sach");
 
-  // Tieu de ban tin
-  await sendToChannel(`BẢN TIN AI HÔM NAY - ${today}`);
+  // Gom tat ca vao 1 tin nhan duy nhat: tieu de ban tin + tin + nguon + cau hoi
+  const caption = stripUrls(
+    `BẢN TIN AI HÔM NAY - ${today}\n\n` +
+      `${item.title}\n\n${item.insight}\n\n(Nguồn: ${src.source})` +
+      (digest.question ? `\n\n${digest.question}` : "")
+  ).slice(0, 1020);
 
-  const sentItems = [];
-  for (const item of items) {
-    const src = news[item.index - 1];
-    if (!src) continue;
-    const caption = stripUrls(`${item.title}\n\n${item.insight}\n\n(Nguồn: ${src.source})`);
-    try {
-      if (src.image) {
-        await sendPhotoToChannel(src.image, caption);
-      } else {
-        await sendToChannel(caption);
-      }
-      sentItems.push(src);
-    } catch (e) {
-      // anh loi (het han, chan hotlink...) -> gui dang text de khong mat tin
-      try {
-        await sendToChannel(caption);
-        sentItems.push(src);
-      } catch (e2) {
-        // bo qua tin nay
-      }
-    }
-    await new Promise((r) => setTimeout(r, 400));
+  const image = await getArticleImage(src);
+  if (image) {
+    await sendPhotoToChannel(image, caption);
+  } else {
+    await sendToChannel(caption);
   }
 
-  if (digest.question) {
-    await sendToChannel(stripUrls(digest.question));
-  }
-
-  await markSent(sentItems);
-  return { sent: true, count: sentItems.length };
+  await markSent([src]);
+  return { sent: true, count: 1, title: item.title, hasImage: Boolean(image) };
 }
 
 module.exports = { sendDailyDigest, fetchFreshNews };
