@@ -483,3 +483,17 @@ Token: lưu trong memory private (không hiển thị trong CLAUDE.md)
 - /send — gửi bài mới nhất lên Telegram
 
 > Lưu ý: Cần chat_id của user. User nhắn 1 tin cho @uyennhiCreator_bot để lấy chat_id lần đầu.
+
+---
+
+## 17. Đồng bộ với Bộ Não Thứ 2 (Obsidian Vault)
+
+Phong làm việc song song ở 2 nơi: project này (`Content-Creation-Template`, qua Antigravity IDE) và vault Obsidian "bộ não thứ 2" tại:
+
+`D:\BỘ NÃO THỨ 2 - PHONG MENLY\BỘ NÃO THỨ 2 - PHONG MENLY\`
+
+Nếu agent đang chạy trong workspace này có quyền ghi file ra ngoài project (ví dụ Claude Code mở cả 2 thư mục cùng lúc), khi có **quyết định quan trọng, tính năng mới, hoặc bài học rút ra** trong lúc làm việc ở đây — chủ động ghi tóm tắt vào nhật ký ngày hôm đó trong vault (`YYYY-MM-DD.md`, tạo nếu chưa có), theo đúng quy tắc mô tả trong `CLAUDE.md` gốc của vault đó.
+
+Nếu agent hiện tại KHÔNG có quyền ghi ra ngoài project này (ví dụ Antigravity chỉ thấy `Content-Creation-Template`), thì chỉ cần đảm bảo các cập nhật quan trọng được ghi rõ trong project này (`docs/`, `plans/`, hoặc note trong `posts/reference`) — lần tới khi Claude Code mở cả 2 thư mục, sẽ tự đọc và đồng bộ ngược vào vault.
+
+> Mục tiêu: vault "bộ não thứ 2" là nguồn kiến thức trung tâm, còn `Content-Creation-Template` là nơi thực thi nội dung/sản phẩm cụ thể.

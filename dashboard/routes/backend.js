@@ -78,6 +78,11 @@ function getAutomationJobs() {
       group: "An toàn", mode: "scheduled", freq: "2:00 sáng hàng ngày", next: nextDailyVN(2, 0),
     },
     {
+      name: "Báo cáo kết quả cuối ngày",
+      desc: "21:30 tối, gửi tổng kết qua Telegram: hôm nay đăng gì + số liệu, cảnh báo bài lỗi, lịch ngày mai, kho bài còn bao nhiêu, việc gì đang chờ bạn duyệt.",
+      group: "Báo cáo", mode: "scheduled", freq: "21:30 hàng ngày", next: nextDailyVN(21, 30),
+    },
+    {
       name: "Nhi tự học cuối ngày",
       desc: "21h tối, Nhi đọc lại hội thoại với bạn và nhật ký làm việc trong ngày, tự rút bài học mới (sở thích, điều bị nhắc, quy tắc mới) rồi áp dụng từ hôm sau. Xem bộ nhớ tự học bằng lệnh /tuhoc trên Telegram.",
       group: "Tự nâng cấp", mode: "scheduled", freq: "21:00 hàng ngày", next: nextDailyVN(21, 0),

@@ -120,6 +120,17 @@ router.get("/telegram-daily-report", checkCronAuth, async (req, res) => {
   }
 });
 
+// Bao cao ket qua cuoi ngay ve Telegram
+router.get("/daily-summary", checkCronAuth, async (req, res) => {
+  try {
+    const { buildDailySummary } = require("../lib/telegram/daily-summary");
+    await sendMessage(OWNER_CHAT_ID, await buildDailySummary());
+    res.json({ ok: true, sent: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Nhi tu hoc cuoi ngay: rut bai hoc tu hoi thoai + hanh dong, nap vao nao cho ngay mai
 router.get("/self-learn", checkCronAuth, async (req, res) => {
   try {
