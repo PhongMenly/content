@@ -1,0 +1,87 @@
+<%- include('partials/header', { pageTitle: 'Backend Marketing', active: 'backend' }) %>
+
+<div class="toolbar">
+  <h2>Các cỗ máy đang chạy tự động</h2>
+  <button id="backend-refresh" class="btn">Làm mới</button>
+</div>
+<div class="settings-card">
+  <div id="job-list" class="job-list">Đang tải...</div>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
+  <h2>Dòng thời gian 48 giờ tới</h2>
+</div>
+<div class="settings-card">
+  <div id="timeline" class="timeline">Đang tải...</div>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
+  <h2>Nhật ký hoạt động gần đây</h2>
+</div>
+<div class="settings-card">
+  <ul id="history-feed" class="history-list"><li>Đang tải...</li></ul>
+</div>
+
+<script>
+  function fmtTime(ms) {
+    const d = new Date(ms);
+    return d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', weekday: 'short', day: '2-digit', month: '2-digit' });
+  }
+  function fmtCountdown(ms) {
+    const diff = Math.max(0, ms - Date.now());
+    const m = Math.round(diff / 60000);
+    if (m < 60) return 'còn ' + m + ' phút';
+    if (m < 1440) return 'còn ' + Math.round(m / 60) + ' giờ';
+    return 'còn ' + Math.round(m / 1440) + ' ngày';
+  }
+  const EVENT_LABELS = {
+    created: 'Tạo bài',
+    status_changed: 'Đổi trạng thái',
+    scheduled: 'Lên lịch',
+    edited: 'Sửa nội dung',
+    image_uploaded: 'Gắn ảnh',
+    share_groups_started: 'Chia sẻ nhóm',
+  };
+
+  async function loadBackend() {
+    const res = await fetch('/api/backend/overview');
+    const data = await res.json();
+
+    document.getElementById('job-list').innerHTML = data.jobs.map(j => `
+      <div class="job-row">
+        <div>
+          <div class="job-name">${j.name}</div>
+          <div class="job-meta">${j.group} · ${j.freq}</div>
+        </div>
+        <div class="job-next">
+          <span class="job-countdown">${fmtCountdown(j.next)}</span>
+          <span class="job-time">${fmtTime(j.next)}</span>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('timeline').innerHTML = data.timeline.length
+      ? data.timeline.map(t => `
+          <div class="timeline-row ${t.type}">
+            <span class="timeline-time">${fmtTime(t.at)}</span>
+            <span class="timeline-dot"></span>
+            <span class="timeline-label">${t.label}</span>
+          </div>
+        `).join('')
+      : '<div class="fb-subtext">48 giờ tới chưa có gì trong lịch — duyệt bài hoặc chờ các job hàng ngày.</div>';
+
+    document.getElementById('history-feed').innerHTML = data.history.length
+      ? data.history.map(h => {
+          const time = new Date(h.created_at * 1000).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+          const label = EVENT_LABELS[h.event_type] || h.event_type;
+          const status = h.to_status ? ' → ' + h.to_status : '';
+          return `<li><strong>${time}</strong> · ${label}${status} · ${h.title ? '#' + h.post_id + ' ' + h.title : ''}${h.note ? ' — ' + h.note : ''}</li>`;
+        }).join('')
+      : '<li>Chưa có hoạt động nào.</li>';
+  }
+
+  document.getElementById('backend-refresh').addEventListener('click', loadBackend);
+  loadBackend();
+</script>
+
+<%- include('partials/footer') %>

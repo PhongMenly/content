@@ -13,6 +13,7 @@ const libraryRouter = require("./routes/library");
 const cronRouter = require("./routes/cron");
 const statsRouter = require("./routes/stats");
 const settingsRouter = require("./routes/settings");
+const backendRouter = require("./routes/backend");
 const telegramRouter = require("./routes/telegram");
 
 const app = express();
@@ -63,6 +64,7 @@ app.use("/api/schedule", scheduleRouter);
 app.use("/api/library", libraryRouter);
 app.use("/api/stats", statsRouter);
 app.use("/api/settings", settingsRouter);
+app.use("/api/backend", backendRouter);
 
 app.get("/", (req, res) => {
   res.render("index");
@@ -88,6 +90,10 @@ app.get("/stats", (req, res) => {
 
 app.get("/settings", (req, res) => {
   res.render("settings");
+});
+
+app.get("/backend", (req, res) => {
+  res.render("backend");
 });
 
 app.use((err, req, res, next) => {

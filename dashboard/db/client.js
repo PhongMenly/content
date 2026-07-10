@@ -141,6 +141,15 @@ async function getHistoryForPost(postId) {
   return sql.query("SELECT * FROM post_history WHERE post_id = $1 ORDER BY created_at DESC", [postId]);
 }
 
+async function getRecentHistory(limit = 25) {
+  return sql.query(
+    `SELECT h.*, p.title FROM post_history h
+     LEFT JOIN posts p ON p.id = h.post_id
+     ORDER BY h.created_at DESC LIMIT $1`,
+    [limit]
+  );
+}
+
 async function updatePostMetrics(id, { likes, comments, shares, reach }) {
   const rows = await sql.query(
     `UPDATE posts SET fb_likes = $1, fb_comments = $2, fb_shares = $3, fb_reach = $4, metrics_updated_at = $5
@@ -265,6 +274,7 @@ module.exports = {
   updatePostStatus,
   logHistory,
   getHistoryForPost,
+  getRecentHistory,
   getScheduledPosts,
   saveCreditSnapshot,
   getLatestCreditSnapshot,
