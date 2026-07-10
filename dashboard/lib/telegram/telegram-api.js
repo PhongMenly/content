@@ -1,9 +1,16 @@
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-async function sendMessage(chatId, text) {
+async function sendMessage(chatId, text, options = {}) {
   const params = new URLSearchParams({ chat_id: chatId, text });
+  if (options.disablePreview) params.set("disable_web_page_preview", "true");
   const res = await fetch(`${TELEGRAM_URL}/sendMessage?${params}`);
+  return res.json();
+}
+
+async function deleteMessage(chatId, messageId) {
+  const params = new URLSearchParams({ chat_id: chatId, message_id: messageId });
+  const res = await fetch(`${TELEGRAM_URL}/deleteMessage?${params}`);
   return res.json();
 }
 
@@ -35,4 +42,4 @@ async function getWebhookInfo() {
   return res.json();
 }
 
-module.exports = { sendMessage, sendPhoto, sendTyping, setWebhook, getWebhookInfo };
+module.exports = { sendMessage, sendPhoto, sendTyping, setWebhook, getWebhookInfo, deleteMessage };

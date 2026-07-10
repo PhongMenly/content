@@ -66,18 +66,22 @@ async function sendDailyDigest() {
   const news = await fetchFreshNews(6);
   if (news.length === 0) return { sent: false, reason: "Khong co tin moi" };
 
-  const newsList = news.map((n, i) => `${i + 1}. [${n.source}] ${n.title}\n   Link: ${n.link}`).join("\n");
+  const newsList = news.map((n, i) => `${i + 1}. [${n.source}] ${n.title}`).join("\n");
 
   const systemPrompt =
-    `Ban la bien tap vien ban tin AI cho kenh Telegram cong dong "KOL AI GO GLOBAL" (chu de: dung AI phat trien kinh doanh, vuon ra toan cau). Doc gia la nguoi Viet lam kinh doanh online/affiliate, KHONG ranh ky thuat.\n` +
-    `Nhiem vu: viet BAN TIN AI HOM NAY tu danh sach tin tuc duoc cung cap.\n` +
-    `Dinh dang bat buoc (plain text, khong markdown, khong dau **):\n` +
-    `- Dong dau: "BAN TIN AI HOM NAY - [ngay]" (dung ngay ${new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })})\n` +
-    `- Chon 4-5 tin DANG GIA NHAT voi nguoi kinh doanh. Moi tin: 1 dong tieu de tieng Viet hap dan + 1-2 cau giai thich "tin nay co y nghia gi voi viec kiem tien/kinh doanh cua ban" + dong Link giu nguyen.\n` +
-    `- Cuoi ban tin: 1 cau hoi hoac goi y thao luan ngan cho cong dong.\n` +
-    `Giong: de hieu, thuc chien, khong dich word-by-word, khong bia them thong tin ngoai tieu de.`;
+    `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm kinh doanh online/affiliate, KHÔNG rành kỹ thuật.\n` +
+    `Nhiệm vụ: viết BẢN TIN AI HÔM NAY từ danh sách tin tức được cung cấp.\n` +
+    `BẮT BUỘC viết TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, tự nhiên như người Việt viết.\n` +
+    `Định dạng bắt buộc (plain text, không markdown, không dấu **):\n` +
+    `- Dòng đầu: "BẢN TIN AI HÔM NAY - ${new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}"\n` +
+    `- Chọn 4-5 tin ĐÁNG GIÁ NHẤT với người kinh doanh. Mỗi tin: 1 dòng tiêu đề tiếng Việt hấp dẫn, tiếp theo 1-2 câu giải thích tin này có ý nghĩa gì với việc kiếm tiền/kinh doanh, cuối tin ghi nguồn dạng (Nguồn: TechCrunch).\n` +
+    `- TUYỆT ĐỐI KHÔNG chèn bất kỳ link/URL nào vào bản tin.\n` +
+    `- Cuối bản tin: 1 câu hỏi thảo luận ngắn cho cộng đồng.\n` +
+    `Giọng: dễ hiểu, thực chiến, không dịch word-by-word, không bịa thêm thông tin ngoài tiêu đề.`;
 
-  const digest = await completeOnce(systemPrompt, `Danh sach tin hom nay:\n${newsList}`);
+  let digest = await completeOnce(systemPrompt, `Danh sách tin hôm nay:\n${newsList}`);
+  // Chan cung: loai moi URL neu AI van lo chen vao (chi bai cua Phong moi duoc co link)
+  digest = digest.replace(/https?:\/\/\S+/g, "").replace(/\n{3,}/g, "\n\n").trim();
   await sendToChannel(digest);
   await markSent(news);
   return { sent: true, count: news.length };

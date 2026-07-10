@@ -18,7 +18,7 @@ function assertOk(result, action) {
 }
 
 async function sendToChannel(text) {
-  const result = await sendMessage(CHANNEL_ID, text);
+  const result = await sendMessage(CHANNEL_ID, text, { disablePreview: true });
   assertOk(result, "gui tin");
   return result;
 }
