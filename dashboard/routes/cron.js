@@ -47,6 +47,14 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
       await db.updatePost(post.id, { posted_at: now });
       await db.updatePostStatus(post.id, "posted", { note: "Da gui sang Make va dang len Facebook", actor: "system" });
       results.push({ id: post.id, status: "posted" });
+
+      // Dang Facebook xong -> tu dua bai len kenh Telegram cong dong (loi kenh khong anh huong viec dang)
+      try {
+        const { broadcastPostToChannel } = require("../lib/telegram/channel-broadcast");
+        await broadcastPostToChannel(post);
+      } catch (chErr) {
+        console.error("[channel-broadcast] Loi:", chErr.message);
+      }
     } catch (err) {
       await db.updatePostStatus(post.id, "failed", { note: err.message, actor: "system" });
       results.push({ id: post.id, status: "failed", error: err.message });
@@ -97,6 +105,17 @@ router.get("/telegram-daily-report", checkCronAuth, async (req, res) => {
     const report = await generateReport();
     await sendMessage(OWNER_CHAT_ID, "BAO CAO INSIGHTS HANG NGAY TU NHI:\n\n" + report);
     res.json({ sent: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ban tin AI hang ngay cho kenh cong dong
+router.get("/ai-news-digest", checkCronAuth, async (req, res) => {
+  try {
+    const { sendDailyDigest } = require("../lib/telegram/news-digest");
+    const result = await sendDailyDigest();
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
