@@ -101,8 +101,14 @@ async function proposeTopics({ sendMessage, brandKey = DEFAULT_KEY, count = 5 })
     : `\nCHE DO TU CHU DONG — khong co tu khoa dinh huong, tu do de xuat da dang theo cac pillar.\n`;
 
   const brandProfile = await getBrandProfile(brandKey);
+  // Persona khac (vd uyen_linh): KHONG nhoi bo nao Uyen Nhi (chua day dinh vi/san pham
+  // Phong Menly) vao prompt — tranh giong Phong lan sang chu de cua persona khac
+  const writerPreamble =
+    brandKey === DEFAULT_KEY
+      ? UYEN_NHI_BRAIN
+      : `Ban la chuyen gia chien luoc noi dung. De xuat chu de CHI dua tren ho so nhan vat duoi day. TUYET DOI khong dung dinh vi, san pham hay ten "Phong Menly" — nhan vat nay doc lap.`;
   const systemPrompt =
-    UYEN_NHI_BRAIN +
+    writerPreamble +
     `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +
     brandProfile +
     `\n\n===== NHIEM VU: DE XUAT CHU DE BAI VIET MOI =====\n` +

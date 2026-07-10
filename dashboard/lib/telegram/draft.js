@@ -81,14 +81,19 @@ async function completeOnce(systemPrompt, userPrompt) {
 
 // Tu chon 1 anh tu kho cho bai moi viet: uu tien anh su kien (nguoi that),
 // tranh lap lai anh cua 30 bai gan nhat
-async function pickLibraryImage() {
+async function pickLibraryImage(brandKey) {
   const imgs = await db.listLibraryImages();
   if (!imgs.length) return null;
   const recentUrls = (await db.listPosts({})).slice(0, 30).map((p) => p.image_path).filter(Boolean);
   const unused = imgs.filter((i) => !recentUrls.includes(i.url));
   const pool = unused.length ? unused : imgs;
-  const eventPool = pool.filter((i) => (i.folder || "").toLowerCase().includes("su kien"));
-  const finalPool = eventPool.length ? eventPool : pool;
+  // Chon kho anh theo persona: uyen_linh -> KOLAI (anh Uyen Linh), Phong -> Su kien
+  const wantKol = brandKey && brandKey !== "phong_menly";
+  const preferred = pool.filter((i) => {
+    const folder = (i.folder || "").toUpperCase();
+    return wantKol ? folder.includes("KOLAI") : folder.includes("SU KIEN");
+  });
+  const finalPool = preferred.length ? preferred : pool;
   return finalPool[Math.floor(Math.random() * finalPool.length)].url;
 }
 
@@ -96,9 +101,16 @@ async function pickLibraryImage() {
 async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
   const { getBrandProfile, DEFAULT_KEY } = require("../brand-profile");
   const insights = await getContentInsights();
-  const brandProfile = await getBrandProfile(post.brand_key || DEFAULT_KEY);
+  const brandKey = post.brand_key || DEFAULT_KEY;
+  const brandProfile = await getBrandProfile(brandKey);
+  // Persona khac (vd uyen_linh): khong dung bo nao Uyen Nhi (chua dinh vi + san pham
+  // + link cua Phong Menly) — viet thuan tuy theo ho so nhan vat, tranh lan giong
+  const writerPreamble =
+    brandKey === DEFAULT_KEY
+      ? UYEN_NHI_BRAIN
+      : `Ban la cay viet noi dung chuyen nghiep. Viet bai dang Facebook TIENG VIET voi tu cach chinh NHAN VAT trong ho so duoi day, ngoi thu nhat. TUYET DOI KHONG nhac den "Phong Menly", khong dung san pham/dinh vi nao ngoai ho so nhan vat.`;
   const systemPrompt =
-    UYEN_NHI_BRAIN +
+    writerPreamble +
     `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +
     brandProfile +
     DRAFT_TASK_INSTRUCTION +
@@ -116,7 +128,7 @@ async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
 
   // Bai bat buoc co anh moi duyet/dang duoc -> tu gan anh tu kho neu chua co
   if (!post.image_path) {
-    const imageUrl = await pickLibraryImage();
+    const imageUrl = await pickLibraryImage(brandKey);
     if (imageUrl) {
       await db.updatePost(post.id, { image_path: imageUrl });
       await db.logHistory({ postId: post.id, eventType: "image_uploaded", note: "Tu gan anh tu kho khi viet bai", actor: "system" });
