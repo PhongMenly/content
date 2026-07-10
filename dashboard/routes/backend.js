@@ -38,16 +38,50 @@ function nextInterval(minutes) {
 }
 
 // Danh sach may tu dong — khop voi dashboard/vercel.json
+// mode "watch": may canh truc 24/7, quet lien tuc — khong hien dem nguoc (gay hieu lam)
+// mode "scheduled": chay dung gio co dinh — hien dem nguoc den lan chay ke tiep
 function getAutomationJobs() {
   return [
-    { name: "Tự đăng bài lên Facebook (qua Make)", freq: "5 phút/lần", group: "Đăng bài", next: nextInterval(5) },
-    { name: "Gửi bài chờ duyệt + báo kết quả qua Telegram", freq: "5 phút/lần", group: "Duyệt bài", next: nextInterval(5) },
-    { name: "Đồng bộ số liệu like/comment/share", freq: "1 giờ/lần", group: "Số liệu", next: nextInterval(60) },
-    { name: "Bản tin AI lên kênh KOL AI GO GLOBAL (1 tin + ảnh)", freq: "7:30 sáng hàng ngày", group: "Kênh cộng đồng", next: nextDailyVN(7, 30) },
-    { name: "AI đề xuất chủ đề mới cho Uyên Linh", freq: "8:00 sáng hàng ngày", group: "Ý tưởng", next: nextDailyVN(8, 0) },
-    { name: "Báo cáo insight khách hàng qua Telegram", freq: "8:00 sáng hàng ngày", group: "Báo cáo", next: nextDailyVN(8, 0) },
-    { name: "Backup toàn bộ dữ liệu", freq: "2:00 sáng hàng ngày", group: "An toàn", next: nextDailyVN(2, 0) },
-    { name: "AI đề xuất chủ đề tuần (Phong Menly)", freq: "8:00 sáng thứ 2", group: "Ý tưởng", next: nextWeeklyVN(1, 8, 0) },
+    {
+      name: "Máy đăng bài",
+      desc: "Trực 24/7, canh các bài đã lên lịch. Bài nào đến giờ là tự đăng lên Facebook (qua Make) trong vòng tối đa 5 phút.",
+      group: "Đăng bài", mode: "watch", freq: "quét 5 phút/lần", next: nextInterval(5),
+    },
+    {
+      name: "Máy trợ lý duyệt bài",
+      desc: "Trực 24/7, canh bài viết mới. AI viết xong bài nào là gửi ngay lên Telegram cho bạn duyệt, và báo kết quả sau khi đăng.",
+      group: "Duyệt bài", mode: "watch", freq: "quét 5 phút/lần", next: nextInterval(5),
+    },
+    {
+      name: "Máy đồng bộ số liệu",
+      desc: "Mỗi giờ tự lấy số like, bình luận, chia sẻ mới nhất từ Facebook về bảng Thống kê.",
+      group: "Số liệu", mode: "watch", freq: "1 giờ/lần", next: nextInterval(60),
+    },
+    {
+      name: "Bản tin AI cho kênh cộng đồng",
+      desc: "Chọn 1 tin AI quan trọng nhất trong ngày (ưu tiên affiliate, doanh nghiệp 1 người, AI Influencer), kèm ảnh gốc, đăng lên kênh KOL AI GO GLOBAL.",
+      group: "Kênh cộng đồng", mode: "scheduled", freq: "7:30 sáng hàng ngày", next: nextDailyVN(7, 30),
+    },
+    {
+      name: "AI đề xuất chủ đề cho Uyên Linh",
+      desc: "Mỗi sáng AI nghĩ 3 chủ đề mới theo hồ sơ Uyên Linh và gửi danh sách qua Telegram để bạn chọn.",
+      group: "Ý tưởng", mode: "scheduled", freq: "8:00 sáng hàng ngày", next: nextDailyVN(8, 0),
+    },
+    {
+      name: "Báo cáo insight khách hàng",
+      desc: "Tổng hợp những gì khách hỏi bot, nỗi đau, câu hỏi thường gặp — gửi báo cáo qua Telegram.",
+      group: "Báo cáo", mode: "scheduled", freq: "8:00 sáng hàng ngày", next: nextDailyVN(8, 0),
+    },
+    {
+      name: "Backup toàn bộ dữ liệu",
+      desc: "Sao lưu toàn bộ bài viết, lịch sử, số liệu ra kho lưu trữ an toàn. Giữ 14 bản gần nhất.",
+      group: "An toàn", mode: "scheduled", freq: "2:00 sáng hàng ngày", next: nextDailyVN(2, 0),
+    },
+    {
+      name: "AI đề xuất chủ đề tuần (Phong Menly)",
+      desc: "Sáng thứ 2 hàng tuần, AI đề xuất 5 chủ đề mới cho thương hiệu Phong Menly.",
+      group: "Ý tưởng", mode: "scheduled", freq: "8:00 sáng thứ 2", next: nextWeeklyVN(1, 8, 0),
+    },
   ];
 }
 

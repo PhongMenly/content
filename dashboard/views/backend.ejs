@@ -1,11 +1,18 @@
 <%- include('partials/header', { pageTitle: 'Backend Marketing', active: 'backend' }) %>
 
 <div class="toolbar">
-  <h2>Các cỗ máy đang chạy tự động</h2>
+  <h2>Máy canh trực 24/7 — chạy liên tục, có việc là làm ngay</h2>
   <button id="backend-refresh" class="btn">Làm mới</button>
 </div>
 <div class="settings-card">
-  <div id="job-list" class="job-list">Đang tải...</div>
+  <div id="watch-list" class="job-list">Đang tải...</div>
+</div>
+
+<div class="toolbar" style="margin-top:24px">
+  <h2>Máy chạy theo giờ cố định</h2>
+</div>
+<div class="settings-card">
+  <div id="scheduled-list" class="job-list">Đang tải...</div>
 </div>
 
 <div class="toolbar" style="margin-top:24px">
@@ -47,15 +54,31 @@
     const res = await fetch('/api/backend/overview');
     const data = await res.json();
 
-    document.getElementById('job-list').innerHTML = data.jobs.map(j => `
+    const watchJobs = data.jobs.filter(j => j.mode === 'watch');
+    const schedJobs = data.jobs.filter(j => j.mode !== 'watch');
+
+    document.getElementById('watch-list').innerHTML = watchJobs.map(j => `
+      <div class="job-row">
+        <div>
+          <div class="job-name"><span class="live-dot"></span>${j.name}</div>
+          <div class="job-desc">${j.desc || ''}</div>
+        </div>
+        <div class="job-next">
+          <span class="job-live">Đang trực</span>
+          <span class="job-time">${j.freq}</span>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('scheduled-list').innerHTML = schedJobs.map(j => `
       <div class="job-row">
         <div>
           <div class="job-name">${j.name}</div>
-          <div class="job-meta">${j.group} · ${j.freq}</div>
+          <div class="job-desc">${j.desc || ''}</div>
         </div>
         <div class="job-next">
-          <span class="job-countdown">${fmtCountdown(j.next)}</span>
-          <span class="job-time">${fmtTime(j.next)}</span>
+          <span class="job-countdown">Chạy lần tới: ${fmtCountdown(j.next)}</span>
+          <span class="job-time">${fmtTime(j.next)} · ${j.freq}</span>
         </div>
       </div>
     `).join('');
