@@ -1,18 +1,18 @@
 /**
- * Ban tin AI hang ngay cho kenh KOL AI GO GLOBAL.
- * Quet RSS cac nguon tin AI lon -> loc tin chua gui -> AI tom tat tieng Viet
- * theo giong cong dong (thuc chien, de hieu) -> gui len kenh.
+ * Ban tin AI hang ngay cho kenh KOL AI GO GLOBAL — dang bao anh:
+ * moi tin = 1 anh minh hoa + tieu de tieng Viet + 1-2 cau y nghia kinh doanh.
+ * KHONG kem link (chi bai cua Phong moi duoc co link).
  */
 const db = require("../../db/client");
 const { completeOnce } = require("./draft");
-const { sendToChannel } = require("./channel-broadcast");
+const { sendToChannel, sendPhotoToChannel } = require("./channel-broadcast");
 
 const SENT_KEY = "ai_news_sent_links";
 
 const FEEDS = [
-  { name: "TechCrunch AI", url: "https://techcrunch.com/category/artificial-intelligence/feed/" },
-  { name: "VentureBeat AI", url: "https://venturebeat.com/category/ai/feed/" },
-  { name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
+  { name: "TechCrunch", url: "https://techcrunch.com/category/artificial-intelligence/feed/" },
+  { name: "VentureBeat", url: "https://venturebeat.com/category/ai/feed/" },
+  { name: "The Verge", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
 ];
 
 function decodeEntities(s) {
@@ -23,20 +23,31 @@ function decodeEntities(s) {
     .trim();
 }
 
+function extractImage(block) {
+  const decoded = decodeEntities(block);
+  const m =
+    decoded.match(/<media:content[^>]+url="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i) ||
+    decoded.match(/<media:content[^>]+url="(https?:\/\/[^"]+)"/i) ||
+    decoded.match(/<enclosure[^>]+url="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i) ||
+    decoded.match(/<media:thumbnail[^>]+url="(https?:\/\/[^"]+)"/i) ||
+    decoded.match(/<img[^>]+src="(https?:\/\/[^"]+)"/i);
+  return m ? m[1] : null;
+}
+
 function parseFeed(xml) {
   const items = [];
-  // RSS <item> hoac Atom <entry>
   const blocks = xml.split(/<item[\s>]/).slice(1).concat(xml.split(/<entry[\s>]/).slice(1));
   for (const block of blocks) {
     const title = decodeEntities((block.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || "");
     let link = (block.match(/<link[^>]*href="([^"]+)"/) || [])[1] || "";
     if (!link) link = decodeEntities((block.match(/<link[^>]*>([\s\S]*?)<\/link>/) || [])[1] || "");
-    if (title && link) items.push({ title, link: link.trim() });
+    const image = extractImage(block);
+    if (title && link) items.push({ title, link: link.trim(), image });
   }
   return items;
 }
 
-async function fetchFreshNews(maxItems = 6) {
+async function fetchFreshNews(maxItems = 8) {
   const sent = (await db.getKv(SENT_KEY)) || { links: [] };
   const sentSet = new Set(sent.links);
   const fresh = [];
@@ -50,7 +61,7 @@ async function fetchFreshNews(maxItems = 6) {
         if (!sentSet.has(item.link)) fresh.push({ ...item, source: feed.name });
       }
     } catch (e) {
-      // nguon loi thi bo qua, dung nguon khac
+      // nguon loi thi bo qua
     }
   }
   return fresh.slice(0, maxItems);
@@ -62,29 +73,64 @@ async function markSent(items) {
   await db.setKv(SENT_KEY, { links, updatedAt: new Date().toISOString() });
 }
 
+function stripUrls(s) {
+  return String(s).replace(/https?:\/\/\S+/g, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 async function sendDailyDigest() {
-  const news = await fetchFreshNews(6);
+  const news = await fetchFreshNews(8);
   if (news.length === 0) return { sent: false, reason: "Khong co tin moi" };
 
   const newsList = news.map((n, i) => `${i + 1}. [${n.source}] ${n.title}`).join("\n");
+  const today = new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
   const systemPrompt =
     `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm kinh doanh online/affiliate, KHÔNG rành kỹ thuật.\n` +
-    `Nhiệm vụ: viết BẢN TIN AI HÔM NAY từ danh sách tin tức được cung cấp.\n` +
-    `BẮT BUỘC viết TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, tự nhiên như người Việt viết.\n` +
-    `Định dạng bắt buộc (plain text, không markdown, không dấu **):\n` +
-    `- Dòng đầu: "BẢN TIN AI HÔM NAY - ${new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}"\n` +
-    `- Chọn 4-5 tin ĐÁNG GIÁ NHẤT với người kinh doanh. Mỗi tin: 1 dòng tiêu đề tiếng Việt hấp dẫn, tiếp theo 1-2 câu giải thích tin này có ý nghĩa gì với việc kiếm tiền/kinh doanh, cuối tin ghi nguồn dạng (Nguồn: TechCrunch).\n` +
-    `- TUYỆT ĐỐI KHÔNG chèn bất kỳ link/URL nào vào bản tin.\n` +
-    `- Cuối bản tin: 1 câu hỏi thảo luận ngắn cho cộng đồng.\n` +
-    `Giọng: dễ hiểu, thực chiến, không dịch word-by-word, không bịa thêm thông tin ngoài tiêu đề.`;
+    `Từ danh sách tin được đánh số, chọn 4-5 tin ĐÁNG GIÁ NHẤT với người kinh doanh.\n` +
+    `BẮT BUỘC viết TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ. KHÔNG chèn link/URL. Không markdown.\n` +
+    `Trả về DUY NHẤT 1 JSON hợp lệ đúng định dạng:\n` +
+    `{"items": [{"index": <số thứ tự tin trong danh sách gốc>, "title": "<tiêu đề tiếng Việt hấp dẫn>", "insight": "<1-2 câu: tin này có ý nghĩa gì với việc kiếm tiền/kinh doanh>"}], "question": "<1 câu hỏi thảo luận ngắn cho cộng đồng>"}`;
 
-  let digest = await completeOnce(systemPrompt, `Danh sách tin hôm nay:\n${newsList}`);
-  // Chan cung: loai moi URL neu AI van lo chen vao (chi bai cua Phong moi duoc co link)
-  digest = digest.replace(/https?:\/\/\S+/g, "").replace(/\n{3,}/g, "\n\n").trim();
-  await sendToChannel(digest);
-  await markSent(news);
-  return { sent: true, count: news.length };
+  const raw = await completeOnce(systemPrompt, `Danh sách tin hôm nay:\n${newsList}`);
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Khong parse duoc ban tin tu AI: " + raw.slice(0, 200));
+  const digest = JSON.parse(jsonMatch[0]);
+  const items = (digest.items || []).slice(0, 5);
+  if (items.length === 0) throw new Error("AI khong chon duoc tin nao");
+
+  // Tieu de ban tin
+  await sendToChannel(`BẢN TIN AI HÔM NAY - ${today}`);
+
+  const sentItems = [];
+  for (const item of items) {
+    const src = news[item.index - 1];
+    if (!src) continue;
+    const caption = stripUrls(`${item.title}\n\n${item.insight}\n\n(Nguồn: ${src.source})`);
+    try {
+      if (src.image) {
+        await sendPhotoToChannel(src.image, caption);
+      } else {
+        await sendToChannel(caption);
+      }
+      sentItems.push(src);
+    } catch (e) {
+      // anh loi (het han, chan hotlink...) -> gui dang text de khong mat tin
+      try {
+        await sendToChannel(caption);
+        sentItems.push(src);
+      } catch (e2) {
+        // bo qua tin nay
+      }
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+
+  if (digest.question) {
+    await sendToChannel(stripUrls(digest.question));
+  }
+
+  await markSent(sentItems);
+  return { sent: true, count: sentItems.length };
 }
 
 module.exports = { sendDailyDigest, fetchFreshNews };

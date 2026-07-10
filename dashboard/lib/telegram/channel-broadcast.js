@@ -23,6 +23,12 @@ async function sendToChannel(text) {
   return result;
 }
 
+async function sendPhotoToChannel(photoUrl, caption) {
+  const result = await sendPhoto(CHANNEL_ID, photoUrl, caption);
+  assertOk(result, "gui anh");
+  return result;
+}
+
 async function broadcastPostToChannel(post) {
   const body = (post.body || "").trim();
   if (!body) return;
@@ -35,4 +41,4 @@ async function broadcastPostToChannel(post) {
   }
 }
 
-module.exports = { sendToChannel, broadcastPostToChannel, CHANNEL_ID };
+module.exports = { sendToChannel, sendPhotoToChannel, broadcastPostToChannel, CHANNEL_ID };
