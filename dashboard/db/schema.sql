@@ -29,6 +29,8 @@ ALTER TABLE posts ADD COLUMN IF NOT EXISTS fb_comments INTEGER NOT NULL DEFAULT 
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS fb_shares INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS metrics_updated_at BIGINT;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS angle TEXT;
+-- Moc gio ban bai sang Make, de canh gac biet bai nao ket qua lau ma Make khong xac nhan
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS sent_to_make_at BIGINT;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS fb_reach INTEGER;
 ALTER TABLE posts ALTER COLUMN fb_reach DROP NOT NULL;
 ALTER TABLE posts ALTER COLUMN fb_reach DROP DEFAULT;

@@ -505,6 +505,7 @@ body {
 .status-ready_for_review { background: #FDF3D7; color: #92600A; }
 .status-approved { background: #DCF1F7; color: #0B5D71; }
 .status-scheduled { background: #DFF3E3; color: #14682B; }
+.status-sending { background: #FFF2C2; color: #7A5B00; }
 .status-posted { background: var(--ink); color: var(--gold-2); }
 .status-failed { background: #FADDDD; color: #9B1C1C; }
 

@@ -84,7 +84,7 @@ async function updatePost(id, fields) {
 
   const allowed = [
     "title", "body", "platform", "pillar", "format", "cta_type", "tags",
-    "image_path", "fb_post_id", "scheduled_time", "posted_at",
+    "image_path", "fb_post_id", "scheduled_time", "posted_at", "sent_to_make_at",
     "fb_likes", "fb_comments", "fb_shares", "fb_reach", "metrics_updated_at", "angle", "brand_key",
   ];
   const sets = [];

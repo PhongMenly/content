@@ -61,6 +61,7 @@ function statusLabel(status) {
     ready_for_review: "Chờ duyệt",
     approved: "Đã duyệt",
     scheduled: "Đã lên lịch",
+    sending: "Đang gửi Make",
     posted: "Đã đăng",
     failed: "Lỗi",
     archived: "Lưu trữ",
@@ -532,7 +533,8 @@ async function loadPostList(status) {
 
   // Sap xep theo dong thoi gian: bai sap dang som nhat len dau,
   // roi den cho duyet / ban nhap, cuoi cung la bai da dang (moi nhat truoc)
-  const statusRank = { scheduled: 0, ready_for_review: 1, draft: 2, failed: 3, posted: 4 };
+  // "sending" len dau tien: dang cho Make xac nhan, can de mat toi nhat
+  const statusRank = { sending: -1, scheduled: 0, ready_for_review: 1, draft: 2, failed: 3, posted: 4 };
   posts.sort((a, b) => {
     const ra = statusRank[a.status] !== undefined ? statusRank[a.status] : 2;
     const rb = statusRank[b.status] !== undefined ? statusRank[b.status] : 2;
@@ -598,6 +600,7 @@ const STEPPER_STEPS = [
   { key: "ready_for_review", label: "Cho duyet" },
   { key: "approved", label: "Da duyet" },
   { key: "scheduled", label: "Da len lich" },
+  { key: "sending", label: "Dang gui Make" },
   { key: "posted", label: "Da dang" },
 ];
 

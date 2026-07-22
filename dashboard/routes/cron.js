@@ -38,31 +38,103 @@ router.get("/auto-post", checkCronAuth, async (req, res) => {
         results.push({ id: post.id, status: "failed", error: "Bai chua co hinh anh" });
         continue;
       }
-      // Gui sang Make de dang len Facebook. Make khong goi nguoc lai duoc (buoc
-      // callback hay bi loi validation ben Make), nhung da xac nhan webhook nay
-      // luon dang bai thanh cong that su, nen danh dau "posted" ngay tai day.
-      // Khong co fb_post_id that (Make khong tra ve) nen dong bo so lieu/binh luan
-      // se khong dung duoc cho cac bai nay.
+      // Gui sang Make de dang len Facebook Page.
+      // QUAN TRONG: Make webhook tra "200 Accepted" NGAY CA KHI scenario dang TAT
+      // (no chi xep data vao hang doi, chua chay gi ca). Nen KHONG duoc coi 200 la
+      // "da dang thanh cong" — truoc day lam vay khien dashboard bao "Da dang" trong
+      // khi fanpage trong tron. Gio chi danh dau "sending", doi Make goi nguoc lai
+      // /api/cron/make-callback kem fb_post_id that thi moi chuyen sang "posted".
       await sendToMakeForPosting({ postId: post.id, message: post.body, imageUrl: post.image_path });
-      await db.updatePost(post.id, { posted_at: now });
-      await db.updatePostStatus(post.id, "posted", { note: "Da gui sang Make va dang len Facebook", actor: "system" });
-      results.push({ id: post.id, status: "posted" });
-
-      // Dang Facebook xong -> tu dua bai len kenh Telegram cong dong (loi kenh khong anh huong viec dang)
-      try {
-        const { broadcastPostToChannel } = require("../lib/telegram/channel-broadcast");
-        await broadcastPostToChannel(post);
-      } catch (chErr) {
-        console.error("[channel-broadcast] Loi:", chErr.message);
-      }
+      await db.updatePost(post.id, { sent_to_make_at: now });
+      await db.updatePostStatus(post.id, "sending", { note: "Da gui sang Make, cho Make xac nhan da dang", actor: "system" });
+      results.push({ id: post.id, status: "sending" });
     } catch (err) {
       await db.updatePostStatus(post.id, "failed", { note: err.message, actor: "system" });
       results.push({ id: post.id, status: "failed", error: err.message });
     }
   }
 
-  res.json({ processed: results.length, results });
+  // Chay luon vong canh gac: bai da gui sang Make qua lau ma khong ai xac nhan
+  const stuck = await warnStuckSendingPosts();
+
+  res.json({ processed: results.length, results, stuck });
 });
+
+// Make goi ve day sau khi dang xong (hoac khi loi) — day la chieu ve cua luong,
+// truoc day khong ton tai nen he thong "dang mu": ban di roi khong biet co len that khong.
+// Xac thuc bang CRON_SECRET vi router nay nam ngoai lop dang nhap cua dashboard.
+router.post("/make-callback", checkCronAuth, async (req, res) => {
+  try {
+    const { postId, fbPostId, error } = req.body || {};
+    if (!postId) return res.status(400).json({ error: "Thieu postId" });
+
+    const post = await db.getPost(postId);
+    if (!post) return res.status(404).json({ error: `Khong tim thay bai #${postId}` });
+
+    if (error) {
+      await db.updatePostStatus(post.id, "failed", { note: `Make bao loi khi dang: ${error}`, actor: "make" });
+      await sendMessage(OWNER_CHAT_ID, `BAI DANG LOI\n\nBai #${post.id}: ${post.title || post.slug}\nMake bao: ${error}`);
+      return res.json({ ok: true, status: "failed" });
+    }
+
+    if (!fbPostId) return res.status(400).json({ error: "Thieu fbPostId (va cung khong co error)" });
+
+    await db.updatePost(post.id, { fb_post_id: String(fbPostId), posted_at: Math.floor(Date.now() / 1000) });
+    await db.updatePostStatus(post.id, "posted", { note: `Make xac nhan da dang len Facebook (${fbPostId})`, actor: "make" });
+
+    // Chi bam len kenh Telegram cong dong khi da chac chan bai co tren fanpage
+    try {
+      const { broadcastPostToChannel } = require("../lib/telegram/channel-broadcast");
+      await broadcastPostToChannel(await db.getPost(post.id));
+    } catch (chErr) {
+      console.error("[channel-broadcast] Loi:", chErr.message);
+    }
+
+    res.json({ ok: true, status: "posted", fbPostId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bai ket o trang thai "sending" qua lau = Make khong chay (scenario tat, het
+// operations, connection Facebook chet...). Chi CANH BAO cho anh Phong, khong tu
+// danh "failed" — vi bai co the da len that ma chi thieu buoc goi ve.
+const MAKE_CONFIRM_TIMEOUT_SEC = 15 * 60;
+
+async function warnStuckSendingPosts() {
+  const now = Math.floor(Date.now() / 1000);
+  const sending = (await db.listPosts({ status: "sending" })).filter(
+    (p) => now - Number(p.sent_to_make_at || p.updated_at || 0) > MAKE_CONFIRM_TIMEOUT_SEC
+  );
+
+  const warned = [];
+  for (const post of sending) {
+    try {
+      // Da canh bao roi thi thoi, tranh spam Telegram moi 5 phut
+      const history = await db.getHistoryForPost(post.id);
+      if (history.some((h) => h.event_type === "make_no_confirm")) continue;
+
+      await db.logHistory({
+        postId: post.id,
+        eventType: "make_no_confirm",
+        note: `Qua ${MAKE_CONFIRM_TIMEOUT_SEC / 60} phut khong thay Make xac nhan`,
+        actor: "system",
+      });
+      await sendMessage(
+        OWNER_CHAT_ID,
+        `CANH BAO: MAKE KHONG XAC NHAN\n\n` +
+          `Bai #${post.id}: ${post.title || post.slug}\n` +
+          `Da gui sang Make hon ${MAKE_CONFIRM_TIMEOUT_SEC / 60} phut ma khong co phan hoi.\n\n` +
+          `Anh kiem tra giup: scenario Make con BAT khong, con operations khong, connection Facebook con song khong.\n` +
+          `Neu bai that ra da len fanpage thi chi la buoc goi ve dang loi.`
+      );
+      warned.push(post.id);
+    } catch (err) {
+      console.error("[make-watchdog] Loi:", err.message);
+    }
+  }
+  return { checked: sending.length, warned };
+}
 
 router.get("/sync-metrics", checkCronAuth, async (req, res) => {
   const posted = (await db.listPostedPosts()).filter((p) => p.fb_post_id);
