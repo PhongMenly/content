@@ -156,9 +156,16 @@ router.get("/ai-news-digest", checkCronAuth, async (req, res) => {
 });
 
 // May canh YouTube: co video moi -> Nhi gioi thieu len kenh Telegram cong dong
+// Chay tu dong: quet video moi. Them ?videoId=xxx de gui tay 1 video cu the
+// (dung khi muon dang lai video cu len kenh), ?videoId=latest de gui video moi nhat.
 router.get("/youtube-check", checkCronAuth, async (req, res) => {
   try {
-    const { checkNewVideos } = require("../lib/telegram/youtube-watch");
+    const { checkNewVideos, sendVideoById } = require("../lib/telegram/youtube-watch");
+    const { videoId } = req.query;
+    if (videoId) {
+      const result = await sendVideoById(videoId === "latest" ? null : videoId);
+      return res.json({ ok: true, manual: true, ...result });
+    }
     res.json({ ok: true, ...(await checkNewVideos()) });
   } catch (err) {
     res.status(500).json({ error: err.message });

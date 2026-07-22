@@ -70,6 +70,23 @@ async function writeIntro(video) {
   });
 }
 
+// Gui 1 video len kenh: Nhi viet gioi thieu -> gui kem thumbnail + link
+async function sendVideoToChannel(video) {
+  const intro = await writeIntro(video);
+  const caption = `${intro.trim()}\n\n${video.url}`.slice(0, 1020);
+  await sendPhotoToChannel(await pickThumbnail(video), caption);
+  return { title: video.title, url: video.url, caption };
+}
+
+// Gui thu 1 video cu the (dung de test, hoac khi muon dang lai video cu).
+// videoId de trong -> lay video moi nhat tren kenh.
+async function sendVideoById(videoId) {
+  const videos = await fetchChannelVideos();
+  const video = videoId ? videos.find((v) => v.id === videoId) : videos[0];
+  if (!video) throw new Error(`Khong tim thay video ${videoId} tren kenh`);
+  return sendVideoToChannel(video);
+}
+
 async function checkNewVideos({ firstRunSilent = true } = {}) {
   const videos = await fetchChannelVideos();
   if (!videos.length) return { checked: 0, sent: 0, reason: "RSS khong co video" };
@@ -89,9 +106,7 @@ async function checkNewVideos({ firstRunSilent = true } = {}) {
   const sent = [];
   for (const video of fresh) {
     try {
-      const intro = await writeIntro(video);
-      const caption = `${intro.trim()}\n\n${video.url}`.slice(0, 1020);
-      await sendPhotoToChannel(await pickThumbnail(video), caption);
+      await sendVideoToChannel(video);
       sent.push(video.title);
       known.add(video.id);
     } catch (err) {
@@ -105,4 +120,4 @@ async function checkNewVideos({ firstRunSilent = true } = {}) {
   return { checked: videos.length, sent: sent.length, titles: sent };
 }
 
-module.exports = { checkNewVideos, fetchChannelVideos };
+module.exports = { checkNewVideos, fetchChannelVideos, sendVideoById, sendVideoToChannel };
