@@ -74,11 +74,42 @@ const STATUS_LABELS = {
 // Bat buoc neo ^...$ toan bo chuoi de KHONG khop nham cac cau noi chuyen binh thuong
 // bat dau bang "duyet" (vd "duyet roi do, cam on nhe" khong duoc coi la lenh duyet).
 const APPROVE_RE = /^(?:duyệt|duyet)(?:\s+(?:bài|bai)?\s*#?(\d+))?$/i;
+// "duyet ca", "duyet het", "duyet tat ca", "duyet all", "duyet toan bo"
+const APPROVE_ALL_RE = /^(?:duyệt|duyet)\s+(?:cả|ca|hết|het|all|tất\s*cả|tat\s*ca|toàn\s*bộ|toan\s*bo)(?:\s+(?:bài|bai))?$/i;
 const EDIT_RE = /^(?:sửa|sua)(?:\s+(?:bài|bai)?\s*#?(\d+))?:?\s*([\s\S]+)$/i;
+
+// Duyet 1 bai: xep vao khung gio trong gan nhat roi chuyen sang da len lich
+async function approveOne(post) {
+  const allScheduled = await db.getScheduledPosts({});
+  const taken = allScheduled.filter((p) => p.id !== post.id).map((p) => p.scheduled_time);
+  const slot = nextAvailableSlot(taken);
+  await db.updatePost(post.id, { scheduled_time: slot });
+  return db.updatePostStatus(post.id, "scheduled", {
+    note: "Tu dong len lich sau khi duyet (qua Telegram)",
+    actor: "phong",
+  });
+}
+
+function formatSlot(post) {
+  return post.scheduled_time ? new Date(post.scheduled_time * 1000).toLocaleString("vi-VN") : "chua ro";
+}
 
 async function handleReviewReply(text) {
   const state = await loadState();
   const trimmed = text.trim();
+
+  // Phai kiem tra "duyet ca" TRUOC "duyet <so>" vi ca hai deu bat dau bang "duyet"
+  if (APPROVE_ALL_RE.test(trimmed)) {
+    const pending = (await db.listPosts({})).filter((p) => p.status === "ready_for_review");
+    if (!pending.length) return "Hien khong co bai nao dang cho duyet.";
+
+    const done = [];
+    for (const post of pending.sort((a, b) => a.id - b.id)) {
+      const updated = await approveOne(post);
+      done.push(`#${updated.id} — ${formatSlot(updated)}`);
+    }
+    return `Da duyet ${done.length} bai va tu len lich:\n` + done.join("\n");
+  }
 
   const approveMatch = trimmed.match(APPROVE_RE);
   const editMatch = trimmed.match(EDIT_RE);
@@ -93,19 +124,8 @@ async function handleReviewReply(text) {
       return `Bai #${post.id} hien khong o trang thai cho duyet (dang la: ${STATUS_LABELS[post.status] || post.status}).`;
     }
 
-    const allScheduled = await db.getScheduledPosts({});
-    const taken = allScheduled.filter((p) => p.id !== post.id).map((p) => p.scheduled_time);
-    const slot = nextAvailableSlot(taken);
-    await db.updatePost(post.id, { scheduled_time: slot });
-    const updated = await db.updatePostStatus(post.id, "scheduled", {
-      note: "Tu dong len lich sau khi duyet (qua Telegram)",
-      actor: "phong",
-    });
-
-    const date = updated.scheduled_time
-      ? new Date(updated.scheduled_time * 1000).toLocaleString("vi-VN")
-      : "chua ro";
-    return `Da duyet bai #${updated.id}. Tu dong len lich dang luc: ${date}`;
+    const updated = await approveOne(post);
+    return `Da duyet bai #${updated.id}. Tu dong len lich dang luc: ${formatSlot(updated)}`;
   }
 
   if (editMatch) {

@@ -10,6 +10,49 @@ const router = express.Router();
 
 const OWNER_CHAT_ID = 8481163556;
 
+// Thuc thi lenh noi tu nhien. Tra ve chuoi ket qua THAT (da lam gi, ket qua sao),
+// hoac null neu khong phai lenh -> de AI tra loi nhu binh thuong.
+async function runIntent(text, targetChat) {
+  const { classifyIntent } = require("../lib/telegram/intent");
+  const db = require("../db/client");
+  const intent = await classifyIntent(text);
+
+  if (intent.action === "approve_all") {
+    return handleReviewReply("duyet ca");
+  }
+
+  if (intent.action === "approve_one" && intent.id) {
+    return handleReviewReply(`duyet ${intent.id}`);
+  }
+
+  if (intent.action === "list_pending") {
+    const posts = await db.listPosts({});
+    const pending = posts.filter((p) => p.status === "ready_for_review");
+    const scheduled = posts.filter((p) => p.status === "scheduled");
+    const ideas = posts.filter((p) => p.status === "idea");
+    const lines = [
+      `Cho anh duyet: ${pending.length} bai${pending.length ? " (" + pending.map((p) => "#" + p.id).join(", ") + ")" : ""}`,
+      `Da len lich: ${scheduled.length} bai`,
+      `Y tuong chua viet: ${ideas.length}`,
+    ];
+    return lines.join("\n");
+  }
+
+  if (intent.action === "draft" && intent.id) {
+    const post = await db.getPost(intent.id);
+    if (!post) return `Khong tim thay bai #${intent.id}.`;
+    if (post.status !== "idea") return `Bai #${intent.id} khong phai y tuong (dang la: ${post.status}), khong viet lai duoc.`;
+    const { draftTopic } = require("../lib/telegram/draft");
+    await draftTopic(post, {
+      sendMessage: (t) => sendMessage(targetChat, t),
+      sendPhoto: (url, caption) => sendPhoto(targetChat, url, caption),
+    });
+    return null; // draftTopic da tu gui ban thao roi
+  }
+
+  return null;
+}
+
 // Nhóm nội bộ team — bot reply tất cả tin nhắn, không cần tag
 const TEAM_GROUP_IDS = [-5282553890]; // KOL AI Team - Phong Menly
 
@@ -202,6 +245,14 @@ async function handleMessage(message) {
       const reviewReply = await handleReviewReply(text);
       if (reviewReply) {
         await sendMessage(targetChat, reviewReply);
+        return;
+      }
+
+      // Cach noi tu nhien khong khop regex ("duyet het di em", "cho len lich luon")
+      // -> nho AI doc hieu y dinh, roi CODE thuc thi that va bao ket qua that.
+      const intentReply = await runIntent(text, targetChat);
+      if (intentReply) {
+        await sendMessage(targetChat, intentReply);
         return;
       }
     } catch (err) {
