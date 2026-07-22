@@ -67,21 +67,37 @@ async function checkTelegram() {
   }
 }
 
-async function checkKyma() {
-  const key = process.env.KYMA_API_KEY;
-  const url = process.env.KYMA_API_URL || "https://kymaapi.com/v1";
-  const model = process.env.KYMA_MODEL || "qwen-3.6-plus";
-  if (!key) return skip("Kyma (nao AI)", "thieu KYMA_API_KEY o local (tren Vercel van co)");
+async function checkAi() {
+  const { chatComplete, currentModel, provider } = require("../lib/ai");
+  const name = `Nao AI (${provider()} / ${currentModel()})`;
   try {
-    const r = await fetch(`${url}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
+    const t = await chatComplete({
+      system: "Tra loi dung 2 tu.",
+      messages: [{ role: "user", content: "He thong on chua?" }],
+      maxTokens: 20,
+      temperature: 0,
     });
-    const t = await r.text();
-    r.ok ? ok("Kyma (nao AI)", `HTTP ${r.status}`) : bad("Kyma (nao AI)", `HTTP ${r.status} ${t.slice(0, 150)}`);
+    ok(name, `tra loi duoc: "${t.slice(0, 40)}"`);
   } catch (e) {
-    bad("Kyma (nao AI)", e.message);
+    bad(name, e.message.slice(0, 160));
+  }
+}
+
+// Cac may tu dong tren Vercel co thuc su dang chay khong (khong can bat may cua Phong)
+async function checkCronHeartbeat() {
+  if (!process.env.DATABASE_URL) return skip("Nhip tim cron", "thieu DATABASE_URL");
+  try {
+    const { neon } = require("@neondatabase/serverless");
+    const sql = neon(process.env.DATABASE_URL);
+    const rows = await sql`select updated_at from bot_kv where key = 'bot_review_state'`;
+    if (!rows.length) return bad("Nhip tim cron", "chua co du lieu");
+    const t = Number(rows[0].updated_at);
+    const minutes = Math.round((Date.now() - (t > 1e12 ? t : t * 1000)) / 60000);
+    minutes <= 20
+      ? ok("Nhip tim cron (Vercel)", `may 5 phut vua chay ${minutes} phut truoc`)
+      : bad("Nhip tim cron (Vercel)", `im lang ${minutes} phut — cron co the da tat`);
+  } catch (e) {
+    bad("Nhip tim cron", e.message);
   }
 }
 
@@ -101,7 +117,7 @@ async function checkProdCrons() {
 }
 
 (async () => {
-  const checks = [checkDb(), checkFacebook(), checkMake(), checkTelegram(), checkKyma()];
+  const checks = [checkDb(), checkFacebook(), checkMake(), checkTelegram(), checkAi(), checkCronHeartbeat()];
   if (process.argv.includes("--prod")) checks.push(checkProdCrons());
   await Promise.all(checks);
   for (const [s, n, m] of out) console.log(`[${s}] ${n.padEnd(28)} ${m}`);
