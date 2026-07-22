@@ -17,13 +17,51 @@ function provider() {
 function currentModel() {
   return provider() === "kyma"
     ? process.env.KYMA_MODEL || "qwen-3.6-plus"
-    : process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    : modelChain()[0];
 }
 
-async function callGemini({ system, messages, maxTokens, temperature }) {
+// Ban mien phi cua Google gioi han SO LUOT MOI NGAY cho TUNG MODEL rieng biet.
+// Het han muc model chinh -> tu chuyen sang model du phong (moi model mot han muc
+// rieng) de he thong khong chet ca ngay. Doi thu tu qua GEMINI_MODEL (ngan cach
+// bang dau phay) neu muon.
+const DEFAULT_MODEL_CHAIN = [
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+  "gemini-3-flash-preview",
+];
+
+function modelChain() {
+  const configured = (process.env.GEMINI_MODEL || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!configured.length) return DEFAULT_MODEL_CHAIN;
+  // Model cau hinh dung dau, roi den cac model du phong con lai
+  return [...configured, ...DEFAULT_MODEL_CHAIN.filter((m) => !configured.includes(m))];
+}
+
+async function callGeminiChain(args) {
+  const chain = modelChain();
+  let lastErr;
+  for (const model of chain) {
+    try {
+      return await callGemini({ ...args, model });
+    } catch (err) {
+      lastErr = err;
+      // Het han muc ngay / model khong dung duoc -> thu model tiep theo.
+      // Loi khac (sai key, mat mang) thi bao ngay, khong thu vo ich.
+      if (!/\b(429|404)\b/.test(err.message)) throw err;
+    }
+  }
+  throw new Error(`Tat ca model Gemini deu khong dung duoc. Loi cuoi: ${lastErr && lastErr.message}`);
+}
+
+async function callGemini({ system, messages, maxTokens, temperature, model }) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Thieu GEMINI_API_KEY");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  if (!model) model = modelChain()[0];
 
   const buildBody = (withThinkingOff) => {
     const body = {
@@ -108,7 +146,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 async function chatComplete({ system, messages, maxTokens = 1200, temperature = 0.8 }) {
   const args = { system, messages, maxTokens, temperature };
-  const call = () => (provider() === "kyma" ? callKymaProvider(args) : callGemini(args));
+  const call = () => (provider() === "kyma" ? callKymaProvider(args) : callGeminiChain(args));
 
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {

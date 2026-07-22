@@ -182,36 +182,49 @@ async function sendDailyDigest() {
     `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm affiliate marketing, xây doanh nghiệp 1 người, làm AI Influencer — họ cần tin để HÀNH ĐỘNG, không cần tin để biết.\n` +
     `CHỦ ĐỀ ƯU TIÊN khi chọn tin (theo thứ tự): (1) affiliate marketing và kiếm tiền online; (2) xây dựng doanh nghiệp 1 người bằng AI; (3) AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng; (4) động thái của các công ty: Higgsfield, Topview, Lovable, Anthropic/Claude, Google/Gemini, OpenAI/ChatGPT; (5) gọi vốn và khởi nghiệp AI. Tin không dính chủ đề nào thì chỉ chọn khi thực sự lớn.\n` +
     (notesBlock ? `\n${notesBlock}\nNEU co tin nao trong danh sach lien quan truc tiep den ghi chu hien trang tren, UU TIEN chon tin do truoc tien.\n` : "") +
-    `Từ danh sách tin được đánh số, chọn DUY NHẤT 1 TIN QUAN TRỌNG NHẤT theo tiêu chí trên.\n` +
-    `Với MỖI tin, phần "insight" phải SÂU nhưng NGẮN GỌN: đúng 2-3 câu súc tích, đi thẳng vào việc người làm affiliate/doanh nghiệp 1 người/AI influencer TẬN DỤNG được gì NGAY (cách làm cụ thể, use-case), kèm cơ hội hoặc rủi ro nếu đáng nói. Không câu mở đầu vòng vo, không lặp lại tiêu đề. CẤM viết chung chung kiểu "giúp tiết kiệm thời gian", "nâng cao hiệu quả". Insight tối đa 300 ký tự.\n` +
+    `Từ danh sách tin được đánh số, chọn 3 TIN đáng đọc nhất theo tiêu chí trên.\n` +
+    `BẮT BUỘC ĐA DẠNG: 3 tin phải thuộc 3 CHỦ ĐỀ KHÁC NHAU và nói về 3 công ty/sự kiện KHÁC NHAU. Tuyệt đối không chọn 2 tin cùng nói về một hãng hoặc cùng một sự việc. Nếu danh sách không đủ đa dạng thì chọn ít tin hơn, không chọn trùng chủ đề.\n` +
+    `Với MỖI tin, phần "insight" phải SÂU nhưng NGẮN GỌN: đúng 2 câu súc tích, đi thẳng vào việc người làm affiliate/doanh nghiệp 1 người/AI influencer TẬN DỤNG được gì NGAY (cách làm cụ thể, use-case), kèm cơ hội hoặc rủi ro nếu đáng nói. Không câu mở đầu vòng vo, không lặp lại tiêu đề. CẤM viết chung chung kiểu "giúp tiết kiệm thời gian", "nâng cao hiệu quả". Insight tối đa 220 ký tự.\n` +
     `BẮT BUỘC viết TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ. KHÔNG chèn link/URL. Không markdown.\n` +
-    `Trả về DUY NHẤT 1 JSON hợp lệ đúng định dạng:\n` +
-    `{"items": [{"index": <số thứ tự tin trong danh sách gốc>, "title": "<tiêu đề tiếng Việt hấp dẫn>", "insight": "<phân tích 3-4 câu theo khung trên>"}], "question": "<1 câu hỏi thảo luận ngắn gắn với chủ đề ưu tiên>"}`;
+    `Trả về DUY NHẤT 1 JSON hợp lệ đúng định dạng (mảng items có 3 phần tử, xếp tin quan trọng nhất lên đầu):\n` +
+    `{"items": [{"index": <số thứ tự tin trong danh sách gốc>, "title": "<tiêu đề tiếng Việt hấp dẫn>", "insight": "<2 câu theo khung trên>"}], "question": "<1 câu hỏi thảo luận ngắn gắn với chủ đề ưu tiên>"}`;
 
   const raw = await completeOnce(systemPrompt, `Danh sách tin hôm nay:\n${newsList}`);
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Khong parse duoc ban tin tu AI: " + raw.slice(0, 200));
   const digest = JSON.parse(jsonMatch[0]);
-  const item = (digest.items || [])[0];
-  if (!item) throw new Error("AI khong chon duoc tin nao");
-  const src = news[item.index - 1];
-  if (!src) throw new Error("Tin AI chon khong khop danh sach");
 
-  // Gom tat ca vao 1 tin nhan duy nhat: tieu de ban tin + tin + nguon + cau hoi
+  // Ghep tin AI chon voi tin goc, bo cac muc AI tra ve sai chi so
+  const picked = (digest.items || [])
+    .map((item) => ({ item, src: news[item.index - 1] }))
+    .filter((x) => x.src)
+    .slice(0, 3);
+  if (!picked.length) throw new Error("AI khong chon duoc tin nao");
+
+  // Gom vao 1 tin nhan duy nhat: tieu de ban tin + cac tin + cau hoi thao luan
+  const blocks = picked.map(
+    ({ item, src }, i) => `${i + 1}. ${item.title}\n${item.insight}\n(Nguồn: ${src.source})`
+  );
   const caption = stripUrls(
     `BẢN TIN AI HÔM NAY - ${today}\n\n` +
-      `${item.title}\n\n${item.insight}\n\n(Nguồn: ${src.source})` +
+      blocks.join("\n\n") +
       (digest.question ? `\n\n${digest.question}` : "")
   ).slice(0, 1020);
 
-  // Luon gui kem anh: neu khong lay duoc anh that tu bai bao, dung anh
+  // Luon gui kem anh: uu tien anh that cua tin dau tien, khong co thi dung anh
   // thuong hieu du phong (khong bao gio gui tin thuan text).
-  const realImage = await getArticleImage(src);
+  const realImage = await getArticleImage(picked[0].src);
   const image = realImage || FALLBACK_IMAGES[Math.floor(Date.now() / 1000) % FALLBACK_IMAGES.length];
   await sendPhotoToChannel(image, caption);
 
-  await markSent([src]);
-  return { sent: true, count: 1, title: item.title, hasImage: true, usedFallbackImage: !realImage };
+  await markSent(picked.map((x) => x.src));
+  return {
+    sent: true,
+    count: picked.length,
+    titles: picked.map((x) => x.item.title),
+    hasImage: true,
+    usedFallbackImage: !realImage,
+  };
 }
 
 module.exports = { sendDailyDigest, fetchFreshNews };

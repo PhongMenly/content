@@ -155,6 +155,16 @@ router.get("/ai-news-digest", checkCronAuth, async (req, res) => {
   }
 });
 
+// May canh YouTube: co video moi -> Nhi gioi thieu len kenh Telegram cong dong
+router.get("/youtube-check", checkCronAuth, async (req, res) => {
+  try {
+    const { checkNewVideos } = require("../lib/telegram/youtube-watch");
+    res.json({ ok: true, ...(await checkNewVideos()) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/db-backup", checkCronAuth, async (req, res) => {
   try {
     const result = await runBackup();
