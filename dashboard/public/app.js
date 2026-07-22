@@ -120,8 +120,52 @@ function formatDate(unixSeconds) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
+// Y tuong chua co noi dung: hien thi tieu de + nut nho AI viet, thay vi ve khung
+// bai Facebook rong khong (nhin nhu bai loi).
+function renderIdeaCard(p) {
+  return `
+    <div class="post-card idea-card" onclick="openPostView(${p.id})">
+      <div class="post-card-badges">
+        <span class="status-badge status-${p.status}">${statusLabel(p.status)}</span>
+        <button class="card-delete-btn" title="Xóa ý tưởng" onclick="deletePostFromCard(event, ${p.id})">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+      <div class="idea-card-inner">
+        <div class="idea-label">Ý tưởng · ${formatRelativeTime(p.created_at)}</div>
+        <h3 class="idea-title">${escapeHtml(p.title || "(Chưa có tiêu đề)")}</h3>
+        <div class="idea-note">Chưa có nội dung. Bấm nút dưới để Nhi viết full bài rồi gửi bạn duyệt.</div>
+        <button class="btn btn-primary idea-draft-btn" onclick="draftIdea(event, ${p.id})">Nhi viết bài ngay</button>
+      </div>
+      <div class="post-card-meta">
+        <span>${p.pillar || "Chưa gắn pillar"}</span>
+        <span>${p.brand_key ? p.brand_key.replace(/_/g, " ") : ""}</span>
+      </div>
+    </div>
+  `;
+}
+
+async function draftIdea(event, id) {
+  event.stopPropagation();
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "Nhi đang viết...";
+  try {
+    const res = await fetch(`/api/posts/${id}/draft`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Lỗi ${res.status}`);
+    const activeFilter = document.querySelector(".filter-btn.active");
+    loadPostList(activeFilter ? activeFilter.dataset.status : "");
+  } catch (err) {
+    alert("Không viết được bài: " + err.message);
+    btn.disabled = false;
+    btn.textContent = "Nhi viết bài ngay";
+  }
+}
+
 function renderPostCard(p) {
   const bodyText = (p.body || "").replace(/^#.*\n+/, "").slice(0, 220);
+  if (!bodyText.trim()) return renderIdeaCard(p);
   const isPosted = p.status === "posted";
   const dateLine = isPosted
     ? `Đã đăng ${formatDate(p.posted_at || p.created_at)}`

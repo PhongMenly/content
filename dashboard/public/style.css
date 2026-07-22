@@ -458,6 +458,41 @@ body {
   align-items: center;
 }
 
+/* ===== Thẻ ý tưởng (chưa có nội dung) ===== */
+.idea-card {
+  border-style: dashed;
+  border-color: #C9CDD4;
+  background: #FCFCFD;
+}
+.idea-card-inner {
+  padding: 40px 18px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 190px;
+}
+.idea-label {
+  font-size: 12px;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.idea-title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.idea-note {
+  font-size: 13px;
+  color: var(--grey);
+  line-height: 1.5;
+  flex: 1;
+}
+.idea-draft-btn {
+  align-self: flex-start;
+}
+
 /* ===== Trạng thái ===== */
 .status-badge {
   display: inline-block;
