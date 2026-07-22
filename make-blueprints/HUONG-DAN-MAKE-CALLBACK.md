@@ -50,7 +50,23 @@ Body khi lỗi:
 
 ---
 
-## TRẠNG THÁI: Bước 2 và 3 đã làm xong qua Make API ngày 23/07/2026
+## TRẠNG THÁI: đã xử lý xong qua Make API rạng sáng 23/07/2026
+
+Việc đã làm:
+
+- Sửa blueprint: thêm bộ lọc chặn rác + module gọi ngược về dashboard
+- Nén ảnh bài #28 (12.6 MB) và #30 (9.1 MB) xuống 0.76 MB và 0.50 MB
+- Deploy code dashboard mới lên production
+- Dọn hàng đợi 5 item của webhook v2 bằng cách chặn tạm bài #17 rồi bật scenario cho chạy hết, sau đó gỡ chặn
+- Bật lại scenario: isActive = true
+- Vô hiệu hóa hook cũ mồ côi (id 3368455)
+
+Việc còn lại phải làm tay trong giao diện Make (API không hỗ trợ):
+
+- Xóa hẳn hook cũ id 3368455 — còn 35 item tồn đọng nên Make chặn xóa. Vào Webhooks, xóa queue của nó rồi xóa hook. Không gấp, hook đã disable.
+- Thêm nhánh error handler cho module Facebook (Bước 3 bên dưới)
+
+
 
 Blueprint scenario 6504441 hiện tại đã là:
 
