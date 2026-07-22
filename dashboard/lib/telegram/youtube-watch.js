@@ -94,21 +94,51 @@ async function sendVideoById(videoId) {
   return sendVideoToChannel(video);
 }
 
-async function checkNewVideos({ firstRunSilent = true } = {}) {
+// Dat lai moc: tinh tu THOI DIEM NAY tro di. Moi video da co tren kenh deu duoc
+// coi la cu, chi video dang SAU thoi diem nay moi duoc gui len kenh.
+async function resetBaseline() {
+  const videos = await fetchChannelVideos();
+  const since = Date.now();
+  await db.setKv(STATE_KEY, { ids: videos.map((v) => v.id), since });
+  return {
+    baselineVideos: videos.length,
+    since: new Date(since).toISOString(),
+    newestKnown: videos[0] ? videos[0].title : null,
+  };
+}
+
+async function checkNewVideos() {
   const videos = await fetchChannelVideos();
   if (!videos.length) return { checked: 0, sent: 0, reason: "RSS khong co video" };
 
-  const state = (await db.getKv(STATE_KEY)) || null;
+  const state = await db.getKv(STATE_KEY);
 
-  // Lan dau chay: ghi nhan toan bo video hien co lam moc, khong gui gi ca
+  // Lan dau chay: ghi nhan moc, khong gui gi ca
   if (!state) {
-    await db.setKv(STATE_KEY, { ids: videos.map((v) => v.id) });
-    return { checked: videos.length, sent: 0, reason: "Lan dau chay — da ghi nhan moc, chua gui" };
+    const info = await resetBaseline();
+    return { checked: videos.length, sent: 0, reason: "Lan dau chay — da ghi nhan moc, chua gui", ...info };
   }
 
   const known = new Set(state.ids || []);
-  const fresh = videos.filter((v) => !known.has(v.id)).slice(0, MAX_PER_RUN);
-  if (!fresh.length) return { checked: videos.length, sent: 0, reason: "Khong co video moi" };
+  // Hai lop chan de tuyet doi khong dang lai video cu:
+  //   1. Da nam trong danh sach mốc -> bo qua
+  //   2. Dang TRUOC thoi diem dat moc -> bo qua (bat duoc ca truong hop video cu
+  //      bat ngo quay lai RSS, vd anh Phong doi video an thanh cong khai)
+  const since = Number(state.since) || 0;
+  const fresh = videos
+    .filter((v) => !known.has(v.id))
+    .filter((v) => !since || new Date(v.published).getTime() > since)
+    .slice(0, MAX_PER_RUN);
+
+  if (!fresh.length) {
+    // Video cu lot vao nhung bi chan boi moc thoi gian -> ghi nhan luon cho lan sau
+    const stale = videos.filter((v) => !known.has(v.id));
+    if (stale.length) {
+      stale.forEach((v) => known.add(v.id));
+      await db.setKv(STATE_KEY, { ids: [...known].slice(-50), since });
+    }
+    return { checked: videos.length, sent: 0, reason: "Khong co video moi" };
+  }
 
   const sent = [];
   for (const video of fresh) {
@@ -123,8 +153,8 @@ async function checkNewVideos({ firstRunSilent = true } = {}) {
   }
 
   // Chi giu 50 id gan nhat, du de nhan dien video moi ma khong phinh du lieu
-  await db.setKv(STATE_KEY, { ids: [...known].slice(-50) });
+  await db.setKv(STATE_KEY, { ids: [...known].slice(-50), since });
   return { checked: videos.length, sent: sent.length, titles: sent };
 }
 
-module.exports = { checkNewVideos, fetchChannelVideos, sendVideoById, sendVideoToChannel };
+module.exports = { checkNewVideos, fetchChannelVideos, sendVideoById, sendVideoToChannel, resetBaseline };

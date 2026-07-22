@@ -160,8 +160,10 @@ router.get("/ai-news-digest", checkCronAuth, async (req, res) => {
 // (dung khi muon dang lai video cu len kenh), ?videoId=latest de gui video moi nhat.
 router.get("/youtube-check", checkCronAuth, async (req, res) => {
   try {
-    const { checkNewVideos, sendVideoById } = require("../lib/telegram/youtube-watch");
-    const { videoId } = req.query;
+    const { checkNewVideos, sendVideoById, resetBaseline } = require("../lib/telegram/youtube-watch");
+    const { videoId, reset } = req.query;
+    // ?reset=1 -> dat lai moc tinh tu bay gio: moi video hien co coi nhu cu
+    if (reset) return res.json({ ok: true, reset: true, ...(await resetBaseline()) });
     if (videoId) {
       const result = await sendVideoById(videoId === "latest" ? null : videoId);
       return res.json({ ok: true, manual: true, ...result });
