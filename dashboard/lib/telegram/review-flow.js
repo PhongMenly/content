@@ -1,5 +1,5 @@
 const db = require("../../db/client");
-const { nextAvailableSlot } = require("../schedule");
+const { nextAvailableSlot, formatVN } = require("../schedule");
 
 const STATE_KEY = "bot_review_state";
 
@@ -91,7 +91,7 @@ async function approveOne(post) {
 }
 
 function formatSlot(post) {
-  return post.scheduled_time ? new Date(post.scheduled_time * 1000).toLocaleString("vi-VN") : "chua ro";
+  return formatVN(post.scheduled_time);
 }
 
 async function handleReviewReply(text) {

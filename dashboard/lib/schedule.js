@@ -45,4 +45,19 @@ function nextAvailableSlot(takenTimes) {
   throw new Error("Khong tim duoc khung gio trong");
 }
 
-module.exports = { toUnixTime, nextAvailableSlot };
+// Hien thi thoi gian cho anh Phong doc. BAT BUOC neo timeZone Asia/Ho_Chi_Minh:
+// server chay o Vercel (mui gio UTC), thieu tham so nay se in ra gio UTC — vd
+// lich 21:00 gio VN bi hien thanh 14:00, nhin nhu he thong xep sai khung gio.
+function formatVN(unixSeconds) {
+  if (!unixSeconds) return "chua ro";
+  return new Date(Number(unixSeconds) * 1000).toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+module.exports = { toUnixTime, nextAvailableSlot, formatVN };
