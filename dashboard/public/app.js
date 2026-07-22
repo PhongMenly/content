@@ -329,7 +329,9 @@ async function openPostView(id, focusComments = false) {
 
   const isPosted = post.status === "posted";
   const metricsEl = document.getElementById("pv-metrics");
-  if (isPosted) {
+  // Chi hien so lieu khi that su co du lieu tu Facebook (fb_post_id). Bai dang qua
+  // Make khong co fb_post_id -> khong dong bo duoc, an di cho khoi hien 0 gia.
+  if (isPosted && post.fb_post_id) {
     metricsEl.style.display = "flex";
     metricsEl.innerHTML = `
       ${post.fb_reach ? `<span>&#128065; ${post.fb_reach} tiếp cận</span>` : ""}
@@ -634,6 +636,13 @@ async function initPostDetailPage() {
     const metricsBox = document.getElementById("post-metrics-box");
     if (post.status === "posted") {
       metricsBox.style.display = "block";
+      // Bai dang qua Make khong co fb_post_id -> Facebook khong tra so lieu ve duoc.
+      // An cac o so lieu va nut lam moi, chi giu lai ngay dang.
+      const hasFbData = Boolean(post.fb_post_id);
+      metricsBox.querySelectorAll(".metric").forEach((el) => {
+        el.style.display = hasFbData ? "" : "none";
+      });
+      document.getElementById("sync-metrics-btn").style.display = hasFbData ? "" : "none";
       const reachEl = document.getElementById("metric-reach");
       if (reachEl) reachEl.textContent = (post.fb_reach === null || post.fb_reach === undefined) ? "—" : post.fb_reach;
       document.getElementById("metric-likes").textContent = post.fb_likes || 0;
@@ -641,9 +650,11 @@ async function initPostDetailPage() {
       document.getElementById("metric-shares").textContent = post.fb_shares || 0;
       document.getElementById("metric-posted-date").textContent = `Da dang ${formatDate(post.posted_at || post.created_at)}`;
       const updatedNote = document.getElementById("metric-updated-note");
-      updatedNote.textContent = post.metrics_updated_at
-        ? `So lieu cap nhat ${formatRelativeTime(post.metrics_updated_at)}`
-        : "Chua co so lieu, bam Lam moi de lay tu Facebook";
+      updatedNote.textContent = !hasFbData
+        ? "Bai dang qua Make nen Facebook khong tra so lieu ve dashboard"
+        : post.metrics_updated_at
+          ? `So lieu cap nhat ${formatRelativeTime(post.metrics_updated_at)}`
+          : "Chua co so lieu, bam Lam moi de lay tu Facebook";
     } else {
       metricsBox.style.display = "none";
     }

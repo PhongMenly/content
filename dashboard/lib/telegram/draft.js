@@ -3,9 +3,7 @@ const UYEN_NHI_BRAIN = require("./brain");
 const { getContentInsights } = require("../post-insights");
 const { markSentAndShown, formatDraftMessage } = require("./review-flow");
 
-const KYMA_API_URL = process.env.KYMA_API_URL || "https://kymaapi.com/v1";
-const KYMA_API_KEY = process.env.KYMA_API_KEY;
-const MODEL = process.env.KYMA_MODEL || "qwen-3.6-plus";
+const { chatComplete } = require("../ai");
 
 const DRAFT_TASK_INSTRUCTION = `
 
@@ -53,30 +51,12 @@ function formatInsightsContext(insights) {
 }
 
 async function completeOnce(systemPrompt, userPrompt) {
-  const response = await fetch(`${KYMA_API_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${KYMA_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 1200,
-      temperature: 0.8,
-    }),
+  return chatComplete({
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+    maxTokens: 1200,
+    temperature: 0.8,
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Kyma API error ${response.status}: ${err}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0].message.content.trim();
 }
 
 // Tu chon 1 anh tu kho cho bai moi viet: uu tien anh su kien (nguoi that),

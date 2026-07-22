@@ -1,10 +1,13 @@
 /**
  * Phat song len kenh Telegram cong dong "KOL AI GO GLOBAL".
- * - Bai dang Facebook thanh cong -> tu dua len kenh
+ * - Bai dang Facebook thanh cong cua persona Phong Menly -> tu dua len kenh
  * - Ban tin AI hang ngay cung gui vao day
+ * Kenh nay CHI danh cho noi dung AI/kinh doanh cua Phong Menly + ban tin AI.
+ * Bai cua cac persona khac (vd Uyen Linh - lifestyle) KHONG phu hop chu de kenh nen khong dua vao day.
  * Bot @uyennhiCreator_bot phai la ADMIN cua kenh (co quyen Post Messages).
  */
 const { sendMessage, sendPhoto } = require("./telegram-api");
+const { DEFAULT_KEY } = require("../brand-profile");
 
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "-1004352564538";
 
@@ -30,6 +33,9 @@ async function sendPhotoToChannel(photoUrl, caption) {
 }
 
 async function broadcastPostToChannel(post) {
+  // Kenh chi danh cho persona Phong Menly (mac dinh) + ban tin AI.
+  // Bai brand_key khac (vd "uyen_linh") khong dung chu de kenh nen bo qua.
+  if (post.brand_key && post.brand_key !== DEFAULT_KEY) return;
   const body = (post.body || "").trim();
   if (!body) return;
   if (post.image_path) {

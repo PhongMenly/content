@@ -1,6 +1,6 @@
 const express = require("express");
 const { sendMessage, sendPhoto, sendTyping } = require("../lib/telegram/telegram-api");
-const { callKyma } = require("../lib/telegram/kyma");
+const { callAi } = require("../lib/telegram/chat");
 const { logConversation, generateReport } = require("../lib/telegram/insights");
 const { learn, getMemoryReport } = require("../lib/telegram/memory");
 const { handleReviewReply } = require("../lib/telegram/review-flow");
@@ -213,7 +213,7 @@ async function handleMessage(message) {
 
   // Tất cả tin nhắn khác qua AI
   try {
-    const reply = await callKyma(targetChat, text, isOwner);
+    const reply = await callAi(targetChat, text, isOwner);
 
     if (!isOwner) {
       await logConversation(chatId, firstName, text, reply);

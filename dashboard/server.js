@@ -21,6 +21,11 @@ const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 4000;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+
+// Meta da chan App cua tai khoan chinh ("API access blocked"), nen khong lay duoc
+// so lieu tuong tac va binh luan cua bai viet qua Graph API. Tat cac phan giao dien
+// phu thuoc vao no de khoi hien so 0 gia. Khoi phuc lai: dat FB_INSIGHTS_ENABLED=1.
+app.locals.fbInsights = process.env.FB_INSIGHTS_ENABLED === "1";
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -85,6 +90,7 @@ app.get("/calendar", (req, res) => {
 });
 
 app.get("/stats", (req, res) => {
+  if (!app.locals.fbInsights) return res.redirect("/");
   res.render("stats");
 });
 
