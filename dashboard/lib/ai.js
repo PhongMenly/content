@@ -25,26 +25,36 @@ async function callGemini({ system, messages, maxTokens, temperature }) {
   if (!key) throw new Error("Thieu GEMINI_API_KEY");
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-  const body = {
-    contents: messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    })),
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-      // Tat che do "suy nghi" — voi cac tac vu viet noi dung nay no chi lam cham
-      // va an het han muc token khien Gemini tra ve rong.
-      thinkingConfig: { thinkingBudget: 0 },
-    },
+  const buildBody = (withThinkingOff) => {
+    const body = {
+      contents: messages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      })),
+      generationConfig: { temperature, maxOutputTokens: maxTokens },
+    };
+    // Tat che do "suy nghi" — voi cac tac vu viet noi dung nay no chi lam cham va
+    // an het han muc token khien Gemini tra ve rong. Mot so model doi moi (3.6+)
+    // bat buoc phai suy nghi va tu choi tham so nay -> tu goi lai khong kem.
+    if (withThinkingOff) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    if (system) body.systemInstruction = { parts: [{ text: system }] };
+    return body;
   };
-  if (system) body.systemInstruction = { parts: [{ text: system }] };
 
-  const res = await fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify(body),
-  });
+  const send = (withThinkingOff) =>
+    fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(buildBody(withThinkingOff)),
+    });
+
+  let res = await send(true);
+  if (res.status === 400) {
+    // Model khong chap nhan tat suy nghi -> goi lai, va noi rong han muc token
+    // de phan suy nghi khong an het phan tra loi.
+    maxTokens = Math.max(maxTokens * 4, 2000);
+    res = await send(false);
+  }
 
   if (!res.ok) throw new Error(`Gemini API error ${res.status}: ${(await res.text()).slice(0, 400)}`);
 
