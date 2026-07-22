@@ -83,14 +83,34 @@ async function callKymaProvider({ system, messages, maxTokens, temperature }) {
   return data.choices[0].message.content.trim();
 }
 
+// Google thinh thoang tra 503 (qua tai) hoac 429 (dung qua nhanh). Day la loi tam
+// thoi — cho vai giay roi thu lai, thay vi de ca co may tu dong chet ca ngay.
+function isTemporary(err) {
+  return /\b(429|500|502|503|504)\b/.test(err.message) || /fetch failed|network|timeout/i.test(err.message);
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /**
- * Goi AI mot lan.
+ * Goi AI mot lan (tu thu lai neu gap loi tam thoi).
  * @param {string} system   — prompt he thong (bo nao/ho so nhan vat)
  * @param {Array}  messages — [{ role: "user" | "assistant", content }]
  */
 async function chatComplete({ system, messages, maxTokens = 1200, temperature = 0.8 }) {
   const args = { system, messages, maxTokens, temperature };
-  return provider() === "kyma" ? callKymaProvider(args) : callGemini(args);
+  const call = () => (provider() === "kyma" ? callKymaProvider(args) : callGemini(args));
+
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await call();
+    } catch (err) {
+      lastErr = err;
+      if (!isTemporary(err) || attempt === 2) throw err;
+      await sleep(2000 * (attempt + 1)); // cho 2s roi 4s
+    }
+  }
+  throw lastErr;
 }
 
 module.exports = { chatComplete, currentModel, provider };
