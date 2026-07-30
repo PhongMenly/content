@@ -1,78 +1,78 @@
-# Hướng C — Đăng bài bằng Google Sheet (không phụ thuộc database)
+# Hướng C — Đăng bài bằng Google Sheet (KHÔNG phụ thuộc database)
 
-Ngày dựng: 30/07/2026
+Cập nhật: 30/07/2026 — ĐÃ CHẠY THÀNH CÔNG END-TO-END (có bài thật lên fanpage, Sheet tự đánh dấu "da dang", Telegram báo).
 
-Ý tưởng: Google Sheet là hàng đợi đăng bài. Make đọc Sheet mỗi ngày 2 lần, thấy bài "cho dang" thì đăng lên fanpage rồi tự đánh dấu "da dang". Neon (database) chết cũng không ảnh hưởng — vì luồng này không đụng tới Neon.
+## Link quan trọng
 
-## Những thứ đã dựng sẵn (mình làm rồi)
+Google Sheet lịch đăng (dùng cái NÀY):
+https://docs.google.com/spreadsheets/d/1pBuc5OpLBmfjpU5aE1fH3P28N17Bhj7eTG9bLRwgaHE/edit
 
-Google Sheet lịch đăng:
-https://docs.google.com/spreadsheets/d/1FNb-pygnRYqQwsAZghXepKikLQ7RIA5_AgIfL0gIXgk/edit
-
-Scenario Make "C. Sheet -> Facebook Auto Post":
+Scenario Make "C. Sheet -> Facebook Auto Post" (id 6758088):
 https://eu1.make.com/2112146/scenarios/6758088/edit
 
-Cấu trúc scenario:
+Lưu ý: có 1 file Sheet cũ tên giống hệt (tạo lúc đầu, chưa dùng được) — bỏ qua, chỉ dùng link ở trên.
+
+## Luồng đã dựng và kiểm chứng
+
 ```
-1. Google Sheets - Search Rows   (tìm bài "cho dang")  <- CẦN NỐI GOOGLE
-2. Facebook Pages - Create Post   (đăng lên fanpage)    <- đã nối sẵn
-3. Google Sheets - Update Row     (đánh dấu "da dang")  <- CẦN NỐI GOOGLE
-4. HTTP -> Telegram               (báo đã đăng)          <- chạy được luôn
+1. Google Sheets - Search Rows   loc Trang thai = "cho dang", lay 1 dong cu nhat
+2. Facebook Pages - Create Post   dang anh + noi dung len fanpage Uyen Linh
+3. Google Sheets - Update Row     ghi "da dang" + Post ID + gio dang vao dong do
+4. HTTP -> Telegram               bao ve @uyennhiCreator_bot
 ```
 
-Lịch chạy đã đặt: mỗi ngày 11:00 và 21:00 (giờ Việt Nam). Mỗi lần lấy 1 bài cũ nhất đang "cho dang".
+Lịch chạy: mỗi ngày 11:00 và 21:00 (giờ VN). Mỗi lần lấy 1 bài.
 
-## Việc DUY NHẤT anh cần làm: nối tài khoản Google vào Make
+Bằng chứng đã chạy: dòng test đã tự đổi thành "da dang", Post ID thật = 786094954576493_122169477932967024.
 
-Mình không đăng nhập Google hộ anh được, nên bước này anh bấm tay (khoảng 2 phút):
+## Bài học kỹ thuật (để sau khỏi mò lại)
 
-1. Mở link scenario ở trên
-2. Bấm vào module số 1 (icon Google Sheets màu xanh lá, tên "Search Rows")
-3. Dòng "Connection" → bấm "Add"
-4. Hiện cửa sổ đăng nhập Google → chọn tài khoản phongconson@gmail.com → bấm Allow/Cho phép
-5. Sau khi nối xong, ngay dưới đó:
-   - Spreadsheet: chọn "Lich Dang Fanpage - Uyen Linh"
-   - Sheet: chọn tab đầu tiên (thường tên "Lich Dang Fanpage - Uyen Linh" hoặc "Sheet1")
-6. Bấm OK
-7. Làm y hệt cho module số 3 ("Update a Row") — nhưng ở bước Connection, lần này chọn luôn kết nối Google vừa tạo (không cần Add lại), rồi chọn đúng Spreadsheet + Sheet như trên
-8. Bật công tắc scheduling ở góc dưới trái (từ OFF sang ON)
+Make Google Sheets "Search Rows" xuất các cột theo SỐ THỨ TỰ (bắt đầu từ 0), KHÔNG theo tên cột:
 
-Xong. Từ giờ Make tự lo việc đăng.
+| Cột | Tên | Số trong Make |
+|-----|-----|--------------|
+| A | Ngay dang | 0 |
+| B | Gio dang | 1 |
+| C | Pillar | 2 |
+| D | Noi dung | 3 |
+| E | Link anh | 4 |
+| F | Link CTA | 5 |
+| G | Trang thai | 6 |
+| H | Post ID | 7 |
+| I | Ghi chu | 8 |
+
+- Module 2 gọi ảnh: {{1.`4`}}, nội dung: {{1.`3`}}, CTA: {{1.`5`}}
+- Module 1 lọc theo chữ cái cột: "G"
+- Module 3 ghi theo số: values {"6":"da dang","7":"{{2.id}}","8":"..."}, bắt buộc có valueInputOption = USER_ENTERED
 
 ## Cách dùng hàng ngày
 
-Mở Google Sheet, điền 1 dòng cho mỗi bài:
+Mở Google Sheet, mỗi bài 1 dòng:
 
-| Cột | Điền gì |
-|-----|---------|
-| Ngay dang | Ngày muốn đăng, dạng 2026-08-02 (chỉ để anh xem, không bắt buộc) |
-| Gio dang | Giờ muốn đăng (chỉ để xem) |
-| Pillar | Trụ cột nội dung (AI Thuc chien, Kiem tien voi AI...) |
-| Noi dung | Toàn bộ bài viết. Xuống dòng bằng Alt+Enter. KHÔNG dùng dấu sao hay markdown |
-| Link anh | Link ảnh public (bắt buộc, ảnh dưới 4MB) |
-| Link CTA | Link sản phẩm/affiliate, tự nối vào cuối bài |
-| Trang thai | Gõ "cho dang" khi muốn Make đăng. Để trống thì Make bỏ qua |
-| Post ID | Để trống, Make tự ghi sau khi đăng |
-| Ghi chu | Để trống, Make tự ghi |
+| Cột | Điền |
+|-----|------|
+| Noi dung | Toàn bộ bài viết (xuống dòng Alt+Enter, không markdown) |
+| Link anh | Link ảnh public, DƯỚI 4MB (bắt buộc) |
+| Link CTA | Link sản phẩm (tự nối cuối bài) |
+| Trang thai | Gõ "cho dang" khi muốn đăng. Để trống thì bỏ qua |
 
-Nguyên tắc: cứ dòng nào có Trang thai = "cho dang" thì tới giờ (11:00 hoặc 21:00) Make lấy dòng cũ nhất đăng trước, xong đổi thành "da dang". Như xếp hàng.
+Xong tới 11:00 hoặc 21:00 Make tự đăng bài cũ nhất, đổi thành "da dang".
 
-Nhớ xóa dòng "vi du" màu xám mình để sẵn trước khi dùng thật.
+## Để chạy thật (khi có nội dung)
 
-## Khi nào biết bài đã lên
+1. Xóa dòng test (dòng đang là "da dang")
+2. Điền các bài thật, cột Trang thai = "cho dang"
+3. Vào scenario Make, gạt công tắc scheduling sang ON
+4. Ảnh phải là link public dưới 4MB
 
-Make đăng xong sẽ nhắn Telegram cho anh (bot @uyennhiCreator_bot vẫn gửi được, không phụ thuộc Neon). Trong Sheet, cột Trang thai đổi thành "da dang" và cột Post ID có số.
+## Việc còn lại (chờ Neon sống 1/08)
 
-## Còn chờ Neon sống lại (dự kiến 1/08)
+- Bơm 3 bài cũ (#31, #32, #17) từ dashboard vào Sheet
+- Bật lại bot Telegram + Nhi viết bài
+- Nối dashboard tự đẩy bài đã duyệt vào Sheet (khỏi copy tay)
 
-Khi Neon mở quota lại, mình sẽ làm nốt:
-- Bơm 3 bài chưa đăng cũ (#31, #32, #17) từ Neon vào Sheet này
-- Bật lại bot Telegram (phần duyệt bài) và Nhi viết bài
-- Nối dashboard tự đẩy bài đã duyệt vào Sheet (để anh khỏi copy tay)
+Nhưng luồng Sheet + Make này chạy độc lập, Neon chết không ảnh hưởng.
 
-Nhưng kể cả không có Neon, luồng Sheet + Make này vẫn tự chạy độc lập.
+## Cần dọn
 
-## Giới hạn cần biết
-
-- Hiện scenario chỉ xử lý bài CÓ ẢNH (đúng kiểu bài Uyên Linh đang đăng). Bài chỉ có chữ không ảnh sẽ cần thêm 1 nhánh — làm sau nếu cần.
-- Ảnh phải là link public, dưới 4MB (Facebook giới hạn). Ảnh nặng hơn sẽ lỗi.
+- Trên fanpage Uyên Linh có vài bài TEST (ảnh nền đen chữ vàng "TEST HE THONG") — xóa đi.
