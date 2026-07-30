@@ -50,9 +50,10 @@ async function callGeminiChain(args) {
       return await callGemini({ ...args, model });
     } catch (err) {
       lastErr = err;
-      // Het han muc ngay / model khong dung duoc -> thu model tiep theo.
-      // Loi khac (sai key, mat mang) thi bao ngay, khong thu vo ich.
-      if (!/\b(429|404)\b/.test(err.message)) throw err;
+      // Het han muc ngay (429) / model khong dung duoc (404) / model qua tai
+      // (500, 503) -> thu model tiep theo trong chain thay vi chet ngay.
+      // Loi khac (sai key 401/403, mat mang) thi bao ngay, khong thu vo ich.
+      if (!/\b(429|404|500|503)\b/.test(err.message)) throw err;
     }
   }
   throw new Error(`Tat ca model Gemini deu khong dung duoc. Loi cuoi: ${lastErr && lastErr.message}`);
