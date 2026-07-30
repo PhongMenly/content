@@ -49,4 +49,45 @@ async function classifyIntent(text) {
   }
 }
 
-module.exports = { classifyIntent };
+// Phan loai y dinh khi anh Phong tra loi mot DANH SACH CHU DE do Nhi de xuat.
+// Khac voi classifyIntent (duyet bai nhap) — day la chon chu de de VIET.
+// `numbers` la cac so chu de dang co that (vd [1,2,3,4,5]).
+async function classifyTopicIntent(text, numbers) {
+  const trimmed = (text || "").trim();
+  if (!trimmed) return { action: "none" };
+
+  const prompt = `Nguoi dung vua duoc de xuat cac chu de bai viet, danh so: ${numbers.join(", ")}.
+Doc cau tra loi va tra ve DUY NHAT mot JSON, khong giai thich, khong markdown.
+
+Y dinh hop le:
+- {"action":"select_all"}              — chon/viet/duyet TAT CA chu de (vd: "duyet ca", "viet het di", "chon tat ca", "lam het", "ok het", "duyet toan bo")
+- {"action":"select","numbers":[1,3]}  — chon mot so chu de cu the de viet (vd: "viet bai 1 va 3", "lam so 1,3", "chon cai 2", "so 1 di em")
+- {"action":"reject","numbers":[2]}    — bo/huy mot so chu de (vd: "bo bai 2", "khong thich so 2", "xoa 2", "huy 4")
+- {"action":"none"}                    — khong ro / cau hoi / tan gau
+
+Quy tac:
+- Chi lay cac so nam trong danh sach ${numbers.join(", ")}. Bo qua so ngoai danh sach.
+- Khong chac chan -> {"action":"none"}. Tha bo sot con hon lam sai.
+- Cau chi HOI ("chon may cai?", "so 1 la gi?") -> "none".`;
+
+  try {
+    const raw = await chatComplete({
+      system: prompt,
+      messages: [{ role: "user", content: trimmed }],
+      maxTokens: 60,
+      temperature: 0,
+    });
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return { action: "none" };
+    const parsed = JSON.parse(match[0]);
+    if (!parsed || typeof parsed.action !== "string") return { action: "none" };
+    if (Array.isArray(parsed.numbers)) {
+      parsed.numbers = parsed.numbers.map(Number).filter((n) => numbers.includes(n));
+    }
+    return parsed;
+  } catch (e) {
+    return { action: "none" };
+  }
+}
+
+module.exports = { classifyIntent, classifyTopicIntent };

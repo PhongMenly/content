@@ -182,31 +182,24 @@ function parseNumbers(text) {
     .filter((n) => !isNaN(n));
 }
 
-// Xu ly reply "chon 1,3" hoac "bo 2". Tra ve null neu khong khop pattern nao.
-async function handleTopicReply(text, { sendMessage, sendPhoto }) {
-  const trimmed = text.trim();
-  const chonMatch = trimmed.match(/^chọn\s+([\d,\s]+)$/i) || trimmed.match(/^chon\s+([\d,\s]+)$/i);
-  const boMatch = trimmed.match(/^bỏ\s+([\d,\s]+)$/i) || trimmed.match(/^bo\s+([\d,\s]+)$/i);
-
-  if (!chonMatch && !boMatch) return null;
-
+// Viet full bai cho cac so chu de dang cho. Dung chung cho ca lenh cung va lenh tu nhien.
+async function writeTopics(numbers, { sendMessage, sendPhoto }) {
   const state = await loadTopicState();
-  const numbers = parseNumbers((chonMatch || boMatch)[1]);
-  if (numbers.length === 0) return null;
-
-  if (chonMatch) {
-    const results = [];
-    for (const n of numbers) {
-      const postId = state.map[n];
-      if (!postId) { results.push(`Khong tim thay chu de so ${n}`); continue; }
-      const post = await db.getPost(postId);
-      if (!post || post.status !== "idea") { results.push(`Chu de so ${n} da xu ly roi`); continue; }
-      await draftTopic(post, { sendMessage, sendPhoto });
-      results.push(`Da viet full bai cho chu de so ${n} (#${postId}), gui ben tren de duyet`);
-    }
-    return results.join("\n");
+  const results = [];
+  for (const n of numbers) {
+    const postId = state.map[n];
+    if (!postId) { results.push(`Khong tim thay chu de so ${n}`); continue; }
+    const post = await db.getPost(postId);
+    if (!post || post.status !== "idea") { results.push(`Chu de so ${n} da xu ly roi`); continue; }
+    await draftTopic(post, { sendMessage, sendPhoto });
+    results.push(`Da viet full bai cho chu de so ${n} (#${postId}), gui ben tren de duyet`);
   }
+  return results.join("\n");
+}
 
+// Bo (archive) cac so chu de dang cho.
+async function dropTopics(numbers, _handlers) {
+  const state = await loadTopicState();
   const results = [];
   for (const n of numbers) {
     const postId = state.map[n];
@@ -217,12 +210,62 @@ async function handleTopicReply(text, { sendMessage, sendPhoto }) {
   return results.join("\n");
 }
 
+// Cac so chu de van dang cho (post con la "idea"). Rong -> khong co gi de chon.
+async function getPendingTopicNumbers() {
+  const state = await loadTopicState();
+  const nums = [];
+  for (const [n, postId] of Object.entries(state.map || {})) {
+    const post = await db.getPost(postId);
+    if (post && post.status === "idea") nums.push(parseInt(n, 10));
+  }
+  return nums.sort((a, b) => a - b);
+}
+
+// Xu ly reply "chon 1,3" hoac "bo 2" (cu phap cung). Tra ve null neu khong khop.
+async function handleTopicReply(text, handlers) {
+  const trimmed = text.trim();
+  const chonMatch = trimmed.match(/^chọn\s+([\d,\s]+)$/i) || trimmed.match(/^chon\s+([\d,\s]+)$/i);
+  const boMatch = trimmed.match(/^bỏ\s+([\d,\s]+)$/i) || trimmed.match(/^bo\s+([\d,\s]+)$/i);
+  if (!chonMatch && !boMatch) return null;
+
+  const numbers = parseNumbers((chonMatch || boMatch)[1]);
+  if (numbers.length === 0) return null;
+  return chonMatch ? writeTopics(numbers, handlers) : dropTopics(numbers, handlers);
+}
+
+// Hieu lenh chon/bo chu de bang NGON NGU TU NHIEN ("duyet ca", "viet bai 1 va 3",
+// "bo so 2"). Chi chay khi dang co chu de cho -> tranh nham voi luong duyet bai nhap.
+const TOPIC_HINT = /(\d|hết|het|cả|ca|tất|tat|toàn|toan|chọn|chon|viết|viet|làm|lam|bỏ|bo|duyệt|duyet|\bok\b|xong|đồng ý|dong y|hủy|huy|xóa|xoa)/i;
+
+async function handleTopicNaturalReply(text, handlers) {
+  const trimmed = (text || "").trim();
+  if (!trimmed || trimmed.length > 200 || !TOPIC_HINT.test(trimmed)) return null;
+  const pending = await getPendingTopicNumbers();
+  if (!pending.length) return null;
+
+  const { classifyTopicIntent } = require("./intent");
+  const intent = await classifyTopicIntent(trimmed, pending);
+
+  if (intent.action === "select_all") return writeTopics(pending, handlers);
+  if (intent.action === "select" && Array.isArray(intent.numbers)) {
+    const ns = intent.numbers.filter((n) => pending.includes(n));
+    if (ns.length) return writeTopics(ns, handlers);
+  }
+  if (intent.action === "reject" && Array.isArray(intent.numbers)) {
+    const ns = intent.numbers.filter((n) => pending.includes(n));
+    if (ns.length) return dropTopics(ns, handlers);
+  }
+  return null;
+}
+
 module.exports = {
   proposeTopics,
   proposeWeeklyTopics,
   listPendingIdeas,
   addOwnTopic,
   handleTopicReply,
+  handleTopicNaturalReply,
+  getPendingTopicNumbers,
   getTopicKeywords,
   setTopicKeywords,
 };

@@ -4,7 +4,7 @@ const { callAi } = require("../lib/telegram/chat");
 const { logConversation, generateReport } = require("../lib/telegram/insights");
 const { learn, getMemoryReport } = require("../lib/telegram/memory");
 const { handleReviewReply } = require("../lib/telegram/review-flow");
-const { handleTopicReply, addOwnTopic, listPendingIdeas } = require("../lib/telegram/topic-flow");
+const { handleTopicReply, handleTopicNaturalReply, addOwnTopic, listPendingIdeas } = require("../lib/telegram/topic-flow");
 
 const router = express.Router();
 
@@ -233,12 +233,24 @@ async function handleMessage(message) {
   // Duyet/sua chu de hoac bai qua reply tu nhien (chi owner)
   if (isOwner) {
     try {
-      const topicReply = await handleTopicReply(text, {
+      const handlers = {
         sendMessage: (t) => sendMessage(targetChat, t),
         sendPhoto: (url, caption) => sendPhoto(targetChat, url, caption),
-      });
+      };
+
+      // 1) Lenh chon chu de dang cu phap cung ("chon 1,3" / "bo 2")
+      const topicReply = await handleTopicReply(text, handlers);
       if (topicReply) {
         await sendMessage(targetChat, topicReply);
+        return;
+      }
+
+      // 2) Lenh chon chu de noi TU NHIEN ("duyet ca", "viet bai 1 va 3", "bo so 2").
+      // Chay TRUOC luong duyet bai nhap: khi dang co chu de cho, "duyet ca" nghia
+      // la chon het chu de, khong phai duyet bai nhap (dung loi truoc day cua anh Phong).
+      const topicNatural = await handleTopicNaturalReply(text, handlers);
+      if (topicNatural) {
+        await sendMessage(targetChat, topicNatural);
         return;
       }
 
