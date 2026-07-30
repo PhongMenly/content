@@ -15,14 +15,15 @@ const bad = (n, m) => out.push(["LOI  ", n, m]);
 const skip = (n, m) => out.push(["THIEU", n, m]);
 
 async function checkDb() {
-  if (!process.env.DATABASE_URL) return skip("Neon Postgres", "thieu DATABASE_URL");
+  if (!process.env.DATABASE_URL) return skip("Postgres", "thieu DATABASE_URL");
   try {
-    const { neon } = require("@neondatabase/serverless");
-    const sql = neon(process.env.DATABASE_URL);
-    const s = await sql`select status, count(*)::int as n from posts group by status order by n desc`;
-    ok("Neon Postgres", s.map((x) => `${x.status}:${x.n}`).join(", "));
+    const postgres = require("postgres");
+    const pg = postgres(process.env.DATABASE_URL, { prepare: false, ssl: "require", max: 1 });
+    const s = await pg.unsafe("select status, count(*)::int as n from posts group by status order by n desc");
+    await pg.end();
+    ok("Postgres", s.map((x) => `${x.status}:${x.n}`).join(", "));
   } catch (e) {
-    bad("Neon Postgres", e.message);
+    bad("Postgres", e.message);
   }
 }
 

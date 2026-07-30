@@ -1,8 +1,23 @@
 const fs = require("fs");
 const path = require("path");
-const { neon } = require("@neondatabase/serverless");
+const postgres = require("postgres");
 
-const sql = neon(process.env.DATABASE_URL);
+// Chuyen tu Neon sang Postgres chung (Supabase) khi Neon het quota.
+// Dung postgres.js voi prepare:false de chay duoc qua transaction pooler cua
+// Supabase (port 6543 / pgBouncer). Boc lai thanh sql.query(text, params) -> rows
+// de giu nguyen cach goi cu trong toan bo file nay, khong phai sua ~40 cho.
+const pg = postgres(process.env.DATABASE_URL, {
+  prepare: false,
+  ssl: "require",
+  max: 3,
+  idle_timeout: 20,
+  connect_timeout: 15,
+});
+
+const sql = {
+  query: (text, params = []) => pg.unsafe(text, params),
+  raw: pg,
+};
 
 async function ensureSchema() {
   const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");

@@ -1,7 +1,9 @@
 const { put, list, del } = require("@vercel/blob");
-const { neon } = require("@neondatabase/serverless");
+const postgres = require("postgres");
 
-const sql = neon(process.env.DATABASE_URL);
+// Da chuyen tu Neon sang Postgres chung (Supabase). Xem chu thich o db/client.js.
+const pg = postgres(process.env.DATABASE_URL, { prepare: false, ssl: "require", max: 2 });
+const sql = { query: (text, params = []) => pg.unsafe(text, params) };
 const KEEP = 14;
 
 async function runBackup() {
