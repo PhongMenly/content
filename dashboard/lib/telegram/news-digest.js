@@ -49,17 +49,10 @@ const FEEDS = [
   { name: "VentureBeat", url: "https://venturebeat.com/category/ai/feed/" },
 ];
 
-// Tin nhac den cong cu anh Phong lam affiliate -> dinh kem link gioi thieu.
-// Khop theo ca tieu de lan phan AI viet, khong phan biet hoa thuong.
-const AFFILIATE_LINKS = [
-  { match: /higgsfield/i, url: "https://higgsfield.ai/?fpr=twt6ij" },
-  { match: /lovable/i, url: "https://lovablelabs.pxf.io/9VyJx3" },
-];
-
-function affiliateLinkFor(text) {
-  const hit = AFFILIATE_LINKS.find((l) => l.match.test(text || ""));
-  return hit ? hit.url : null;
-}
+// Link affiliate lay tu nguon chung (affiliate-links.js) = dung link that anh
+// Phong cung cap, khong hardcode rieng o day de tranh lech (truoc day link
+// Lovable o day bi sai). Tin nhac toi tool nao -> dinh kem link tuong ung.
+const { affiliateLinkFor } = require("./affiliate-links");
 
 function decodeEntities(s) {
   return String(s)
