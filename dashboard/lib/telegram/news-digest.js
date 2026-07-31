@@ -233,8 +233,15 @@ function stripUrls(s) {
 }
 
 async function sendDailyDigest() {
-  const news = await fetchFreshNews(8);
-  if (news.length === 0) return { sent: false, reason: "Khong co tin moi" };
+  const allNews = await fetchFreshNews(12);
+  // YEU CAU anh Phong: ban tin len nhom Telegram PHAI co video demo moi gui.
+  // -> chi giu tin ve tool co kenh YouTube (Higgsfield, Topview, HeyGen, Jogg,
+  // Base44, ElevenLabs). Tin khong gan duoc video thi bo, khong gui.
+  const news = allNews.filter((n) => {
+    const t = matchTool(`${n.title} ${n.source}`);
+    return t && t.youtube;
+  });
+  if (news.length === 0) return { sent: false, reason: "Khong co tin ve tool nao co video hom nay -> khong gui" };
 
   const newsList = news.map((n, i) => `${i + 1}. [${n.source}] ${n.title}`).join("\n");
   const today = new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -279,30 +286,22 @@ async function sendDailyDigest() {
   const tool = matchTool(matchText);
   const affiliate = tool ? tool.url : null;
 
-  // UU TIEN VIDEO: tin ve tool co kenh YouTube -> gan video demo MOI NHAT cua
-  // tool do. Telegram hien video xem duoc ngay trong bai (dat link video TRUOC
-  // link affiliate de Telegram preview dung video).
-  let toolVideo = null;
-  if (tool && tool.youtube) toolVideo = await getToolLatestVideo(tool.youtube).catch(() => null);
-
-  if (toolVideo) {
-    let msg = `${baseCaption}\n\n▶ Xem ${tool.name} hoạt động: ${toolVideo.url}`;
-    if (affiliate) msg += `\n\nDùng thử tại: ${affiliate}`;
-    await sendLinkPreviewToChannel(msg.slice(0, 4000));
-    await markSent([src]);
-    return { sent: true, count: 1, title: item.title, affiliate, media: "video", video: toolVideo.url, videoTitle: toolVideo.title };
+  // BAT BUOC CO VIDEO: lay video demo moi nhat cua tool. Da loc chi con tin ve
+  // tool co kenh YouTube nen den day gan nhu luon co video; neu RSS loi tam thoi
+  // -> KHONG gui, khong danh dau (de lan sau thu lai), dung yeu cau "phai co
+  // video moi duyet".
+  const toolVideo = tool && tool.youtube ? await getToolLatestVideo(tool.youtube).catch(() => null) : null;
+  if (!toolVideo) {
+    return { sent: false, reason: `Khong lay duoc video demo cho ${tool ? tool.name : "tool"} (RSS loi tam thoi) -> khong gui` };
   }
 
-  // Khong co video tool -> gui anh (anh that neu lay duoc, khong thi anh thuong hieu)
-  let caption = baseCaption;
-  if (affiliate) caption += `\n\nDùng thử tại: ${affiliate}`;
-  let realImage = await getArticleImage(src);
-  if (isBadImage(realImage)) realImage = null;
-  const image = realImage || FALLBACK_IMAGES[Math.floor(Date.now() / 1000) % FALLBACK_IMAGES.length];
-  await sendPhotoToChannel(image, caption);
+  // Link video dat TRUOC link affiliate de Telegram preview dung video (xem ngay trong bai)
+  let msg = `${baseCaption}\n\n▶ Xem ${tool.name} hoạt động: ${toolVideo.url}`;
+  if (affiliate) msg += `\n\nDùng thử tại: ${affiliate}`;
+  await sendLinkPreviewToChannel(msg.slice(0, 4000));
 
   await markSent([src]);
-  return { sent: true, count: 1, title: item.title, affiliate, media: realImage ? "image" : "fallback-image" };
+  return { sent: true, count: 1, title: item.title, affiliate, media: "video", video: toolVideo.url, videoTitle: toolVideo.title };
 }
 
 module.exports = { sendDailyDigest, fetchFreshNews, affiliateLinkFor };
