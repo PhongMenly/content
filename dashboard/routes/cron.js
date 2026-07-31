@@ -18,13 +18,34 @@ function checkCronAuth(req, res, next) {
   return res.status(401).json({ error: "Unauthorized cron request" });
 }
 
+// Bai qua han dang lau hon nguong nay -> coi la ton dong cu (vd vua khoi phuc
+// backup, hoac cron nghi dai), KHONG dang de tranh dang don dap ("lên dồn dập").
+// Cadence binh thuong la 5 phut/lan nen bai hop le luon dang trong vong vai phut.
+const STALE_OVERDUE_SEC = 2 * 3600;
+
 router.get("/auto-post", checkCronAuth, async (req, res) => {
   const now = Math.floor(Date.now() / 1000);
-  const due = (await db.getScheduledPosts({})).filter(
+  const overdue = (await db.getScheduledPosts({})).filter(
     (p) => p.status === "scheduled" && Number(p.scheduled_time) <= now
   );
 
   const results = [];
+
+  // Loc bai ton dong qua cu ra khoi hang doi truoc khi dang -> khong bao gio dang don.
+  const due = [];
+  for (const p of overdue) {
+    if (now - Number(p.scheduled_time) > STALE_OVERDUE_SEC) {
+      const hours = Math.round((now - Number(p.scheduled_time)) / 3600);
+      await db.updatePostStatus(p.id, "archived", {
+        note: `Qua han dang ${hours}h -> bo qua de tranh dang don. Len lich lai neu van muon dang.`,
+        actor: "system",
+      });
+      results.push({ id: p.id, status: "skipped_stale", overdueHours: hours });
+    } else {
+      due.push(p);
+    }
+  }
+
   for (const post of due) {
     try {
       // Khoa an toan: den gio dang ma thieu noi dung hoac thieu anh -> KHONG dang
