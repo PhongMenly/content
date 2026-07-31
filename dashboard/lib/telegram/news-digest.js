@@ -30,23 +30,18 @@ const FALLBACK_IMAGES = [
 const GN = (query) =>
   `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 
-// Uu tien tin NICHE anh Phong quan tam (cong cu thuc chien + AI Influencer),
-// KHONG phai tin ong lon chung chung. Mo rong cua so thoi gian (14-21 ngay) vi
-// cac chu de niche nay khong co tin moi moi ngay.
+// TAP TRUNG DUNG 6 CONG CU anh Phong lam affiliate (theo yeu cau). Moi feed bam
+// sat 1 ten cu the. Cua so 30 ngay vi tin ve tung tool khong ra moi ngay.
+// KHONG lay tin ong lon chung chung. Chi them AI Influencer vi hop dinh vi
+// nhan vat (Uyen Linh chinh la mot AI influencer).
 const FEEDS = [
-  // Cong cu trong tam — theo doi sat dong thai
-  { name: "Higgsfield", url: GN('"Higgsfield" AI when:21d') },
-  { name: "Topview", url: GN('"Topview" OR "Topview.ai" AI video when:21d') },
-  { name: "Lovable", url: GN('"Lovable" AI app builder OR "vibe coding" when:21d') },
-  // AI Influencer / nguoi mau ao co suc anh huong quoc te
+  { name: "Higgsfield", url: GN('"Higgsfield" when:30d') },
+  { name: "Topview", url: GN('"Topview" OR "Topview.ai" when:30d') },
+  { name: "HeyGen", url: GN('"HeyGen" when:30d') },
+  { name: "Jogg AI", url: GN('"Jogg AI" OR "JoggAI" when:30d') },
+  { name: "Base44", url: GN('"Base44" when:30d') },
+  { name: "ElevenLabs", url: GN('"ElevenLabs" when:30d') },
   { name: "AI Influencer", url: GN('"AI influencer" OR "virtual influencer" when:21d') },
-  { name: "AI Model", url: GN('"AI model" OR "virtual model" OR "AI generated model" instagram when:21d') },
-  { name: "Faceless AI", url: GN('"faceless" AI content OR AI UGC creator when:21d') },
-  // Kiem tien / affiliate voi AI
-  { name: "Affiliate AI", url: GN('AI affiliate marketing OR "AI automation" money when:14d') },
-  // Vai nguon nganh de khong bo lo su kien lon that su (uu tien THAP trong prompt)
-  { name: "TechCrunch", url: "https://techcrunch.com/category/artificial-intelligence/feed/" },
-  { name: "VentureBeat", url: "https://venturebeat.com/category/ai/feed/" },
 ];
 
 // Link affiliate lay tu nguon chung (affiliate-links.js) = dung link that anh
@@ -234,12 +229,11 @@ async function sendDailyDigest() {
 
   const systemPrompt =
     `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm affiliate marketing, xây doanh nghiệp 1 người, làm AI Influencer — họ cần tin để HÀNH ĐỘNG, không cần tin để biết.\n` +
-    `CHỦ ĐỀ ƯU TIÊN khi chọn tin (theo thứ tự, ưu tiên tuyệt đối cho tin THỰC CHIẾN, không phải tin ông lớn):\n` +
-    `(1) Động thái công cụ trong ngách: Higgsfield, Topview, Lovable (ra mắt tính năng, đổi giá, cuộc thi, thương vụ);\n` +
-    `(2) AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng quốc tế (case thành công, cách kiếm tiền, thương hiệu thuê);\n` +
-    `(3) Affiliate marketing và kiếm tiền online bằng AI; xây doanh nghiệp 1 người bằng AI;\n` +
-    `(4) Công cụ/tính năng AI mới mà người làm nội dung faceless, video AI, UGC tận dụng được ngay.\n` +
-    `HẠN CHẾ tin của các ông lớn (OpenAI, Google/Gemini, Anthropic, Microsoft, Meta...) — CHỈ chọn khi đó là sự kiện CỰC LỚN ảnh hưởng trực tiếp tới cách người làm nghề kiếm tiền, còn tin ra model/nghiên cứu chung chung của họ thì BỎ QUA. Ưu tiên tin ngách thực chiến hơn tin ông lớn.\n` +
+    `TRỌNG TÂM TUYỆT ĐỐI — chỉ chọn tin về 6 công cụ này (đây là tool anh Phong làm affiliate):\n` +
+    `Higgsfield, Topview, HeyGen, Jogg AI, Base44, ElevenLabs.\n` +
+    `Ưu tiên tin: ra mắt tính năng mới, đổi giá/gói, cuộc thi, thương vụ, cách dùng thực chiến để làm video/voice/app kiếm tiền.\n` +
+    `Ngoài ra chấp nhận thêm tin về AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng quốc tế (vì hợp định vị nhân vật).\n` +
+    `TUYỆT ĐỐI BỎ QUA tin của các ông lớn (OpenAI, Google/Gemini, Anthropic, Microsoft, Meta...) và mọi tool KHÔNG nằm trong 6 tên trên — trừ khi tin đó nói TRỰC TIẾP về 1 trong 6 tool. Phân biệt: "Higgs boson" (vật lý) KHÔNG phải Higgsfield; "top view" (góc nhìn) KHÔNG phải Topview.\n` +
     (notesBlock ? `\n${notesBlock}\nNEU co tin nao trong danh sach lien quan truc tiep den ghi chu hien trang tren, UU TIEN chon tin do truoc tien.\n` : "") +
     `Từ danh sách tin được đánh số, chọn DUY NHẤT 1 TIN QUAN TRỌNG NHẤT theo tiêu chí trên.\n` +
     `CHỈ chọn tin THỰC SỰ QUAN TRỌNG: ra mắt sản phẩm/tính năng lớn, thay đổi giá hoặc chính sách, gọi vốn lớn, thương vụ mua bán, thay đổi ảnh hưởng trực tiếp tới cách người làm nghề kiếm tiền. TUYỆT ĐỐI BỎ QUA: tin dạng bàn luận chung chung, bài xếp hạng "top 10 công cụ", tin trùng lặp sự kiện cũ, tin không liên quan (ví dụ "Higgs boson" trong vật lý KHÔNG phải Higgsfield).\n` +
