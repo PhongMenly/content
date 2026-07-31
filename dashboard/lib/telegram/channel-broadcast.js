@@ -32,6 +32,14 @@ async function sendPhotoToChannel(photoUrl, caption) {
   return result;
 }
 
+// Gui tin co BAT preview -> Telegram hien thi video (neu text co link YouTube o
+// dau) xem duoc ngay trong bai. Dung cho ban tin gan video demo cua tool.
+async function sendLinkPreviewToChannel(text) {
+  const result = await sendMessage(CHANNEL_ID, text, { disablePreview: false });
+  assertOk(result, "gui video");
+  return result;
+}
+
 async function broadcastPostToChannel(post) {
   // Kenh chi danh cho persona Phong Menly (mac dinh) + ban tin AI.
   // Bai brand_key khac (vd "uyen_linh") khong dung chu de kenh nen bo qua.
@@ -47,4 +55,4 @@ async function broadcastPostToChannel(post) {
   }
 }
 
-module.exports = { sendToChannel, sendPhotoToChannel, broadcastPostToChannel, CHANNEL_ID };
+module.exports = { sendToChannel, sendPhotoToChannel, sendLinkPreviewToChannel, broadcastPostToChannel, CHANNEL_ID };

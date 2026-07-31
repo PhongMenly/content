@@ -8,7 +8,7 @@
  */
 const db = require("../../db/client");
 const { completeOnce } = require("./draft");
-const { sendPhotoToChannel } = require("./channel-broadcast");
+const { sendPhotoToChannel, sendLinkPreviewToChannel } = require("./channel-broadcast");
 const { getSystemNotes, formatNotesBlock } = require("./system-notes");
 
 const SENT_KEY = "ai_news_sent_links";
@@ -47,7 +47,20 @@ const FEEDS = [
 // Link affiliate lay tu nguon chung (affiliate-links.js) = dung link that anh
 // Phong cung cap, khong hardcode rieng o day de tranh lech (truoc day link
 // Lovable o day bi sai). Tin nhac toi tool nao -> dinh kem link tuong ung.
-const { affiliateLinkFor } = require("./affiliate-links");
+const { affiliateLinkFor, matchTool } = require("./affiliate-links");
+
+// Lay video MOI NHAT tren kenh YouTube chinh thuc cua 1 tool (qua RSS, khong can
+// API key). Dung de gan video demo that vao ban tin thay cho anh tinh.
+async function getToolLatestVideo(channelId) {
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+  if (!res.ok) return null;
+  const xml = await res.text();
+  const first = xml.split("<entry>")[1] || "";
+  const id = (first.match(/<yt:videoId>([^<]+)<\/yt:videoId>/) || [])[1];
+  const title = decodeEntities((first.match(/<title>([^<]*)<\/title>/) || [])[1] || "");
+  if (!id) return null;
+  return { id, title, url: `https://www.youtube.com/watch?v=${id}` };
+}
 
 function decodeEntities(s) {
   return String(s)
@@ -255,25 +268,41 @@ async function sendDailyDigest() {
   if (!src) throw new Error("Tin AI chon khong khop danh sach");
 
   // stripUrls xoa moi link trong phan AI viet (tranh link rac tu bao). Link
-  // affiliate phai them SAU buoc do thi moi con lai.
-  let caption = stripUrls(
+  // affiliate/video them SAU buoc do thi moi con lai.
+  const baseCaption = stripUrls(
     `BẢN TIN AI HÔM NAY - ${today}\n\n` +
       `${item.title}\n\n${item.insight}\n\n(Nguồn: ${src.source})` +
       (digest.question ? `\n\n${digest.question}` : "")
   ).slice(0, 900);
 
-  const affiliate = affiliateLinkFor(`${item.title} ${item.insight} ${src.title} ${src.source}`);
-  if (affiliate) caption += `\n\nDùng thử tại: ${affiliate}`;
+  const matchText = `${item.title} ${item.insight} ${src.title} ${src.source}`;
+  const tool = matchTool(matchText);
+  const affiliate = tool ? tool.url : null;
 
-  // Luon gui kem anh: neu khong lay duoc anh that tu bai bao, dung anh
-  // thuong hieu du phong (khong bao gio gui tin thuan text).
+  // UU TIEN VIDEO: tin ve tool co kenh YouTube -> gan video demo MOI NHAT cua
+  // tool do. Telegram hien video xem duoc ngay trong bai (dat link video TRUOC
+  // link affiliate de Telegram preview dung video).
+  let toolVideo = null;
+  if (tool && tool.youtube) toolVideo = await getToolLatestVideo(tool.youtube).catch(() => null);
+
+  if (toolVideo) {
+    let msg = `${baseCaption}\n\n▶ Xem ${tool.name} hoạt động: ${toolVideo.url}`;
+    if (affiliate) msg += `\n\nDùng thử tại: ${affiliate}`;
+    await sendLinkPreviewToChannel(msg.slice(0, 4000));
+    await markSent([src]);
+    return { sent: true, count: 1, title: item.title, affiliate, media: "video", video: toolVideo.url, videoTitle: toolVideo.title };
+  }
+
+  // Khong co video tool -> gui anh (anh that neu lay duoc, khong thi anh thuong hieu)
+  let caption = baseCaption;
+  if (affiliate) caption += `\n\nDùng thử tại: ${affiliate}`;
   let realImage = await getArticleImage(src);
-  if (isBadImage(realImage)) realImage = null; // chan lan cuoi truoc khi gui
+  if (isBadImage(realImage)) realImage = null;
   const image = realImage || FALLBACK_IMAGES[Math.floor(Date.now() / 1000) % FALLBACK_IMAGES.length];
   await sendPhotoToChannel(image, caption);
 
   await markSent([src]);
-  return { sent: true, count: 1, title: item.title, affiliate, hasImage: true, usedFallbackImage: !realImage };
+  return { sent: true, count: 1, title: item.title, affiliate, media: realImage ? "image" : "fallback-image" };
 }
 
 module.exports = { sendDailyDigest, fetchFreshNews, affiliateLinkFor };

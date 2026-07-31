@@ -5,24 +5,30 @@
  *
  * `match` la regex khop ten tool trong tieu de/noi dung tin.
  */
+// `youtube` = channel_id kenh YouTube chinh thuc cua tool -> dung de lay video
+// demo MOI NHAT gan vao ban tin (Telegram hien video xem duoc ngay trong bai).
 const AFFILIATE_LINKS = [
-  { name: "Higgsfield", match: /higgsfield/i, url: "https://higgsfield.ai/?fpr=twt6ij" },
-  { name: "Topview AI", match: /top\s*view/i, url: "https://www.topview.ai/?via=KOLAI" },
-  { name: "Lovable", match: /lovable/i, url: "https://lovable.dev/?via=phong" },
-  { name: "HeyGen", match: /heygen/i, url: "https://www.heygen.com/?sid=rewardful&utm_content=creator&utm_medium=affiliate&via=phongpml" },
-  { name: "Jogg AI", match: /jogg\s*ai|joggai/i, url: "https://www.jogg.ai/?fpr=phongmenly" },
-  { name: "BASE44", match: /base\s*44/i, url: "https://base44.pxf.io/c/7117685/2049275/25619?trafcat=base" },
-  { name: "ElevenLabs", match: /eleven\s*labs/i, url: "https://try.elevenlabs.io/3s2obuawcuj7" },
-  { name: "OpenArt", match: /open\s*art/i, url: "https://openart.ai/home/?via=phong" },
-  { name: "PitPit", match: /pit\s*pit|pippit/i, url: "https://pippitcreator.pxf.io/Gb0Ngm" },
-  { name: "Whop", match: /\bwhop\b/i, url: "https://whop.com/?a=phongtyphu" },
+  { name: "Higgsfield", match: /higgsfield/i, url: "https://higgsfield.ai/?fpr=twt6ij", youtube: "UCh13OyDSm-Kb8ij3yZArtFg" },
+  { name: "Topview AI", match: /top\s*view/i, url: "https://www.topview.ai/?via=KOLAI", youtube: "UCvsHoSPDJwqpkVmuppvzuLg" },
+  { name: "HeyGen", match: /heygen/i, url: "https://www.heygen.com/?sid=rewardful&utm_content=creator&utm_medium=affiliate&via=phongpml", youtube: "UCV0FmNF3iM-022BF1KbVtxA" },
+  { name: "Jogg AI", match: /jogg\s*ai|joggai/i, url: "https://www.jogg.ai/?fpr=phongmenly", youtube: "UCxGaTZ4skg9_Ggo6fCNj8dg" },
+  { name: "BASE44", match: /base\s*44/i, url: "https://base44.pxf.io/c/7117685/2049275/25619?trafcat=base", youtube: "UCSOFdbxVtrLZ4L6cJj1l6hg" },
+  { name: "ElevenLabs", match: /eleven\s*labs/i, url: "https://try.elevenlabs.io/3s2obuawcuj7", youtube: "UC-ew9TfeD887qUSiWWAAj1w" },
+  { name: "Lovable", match: /lovable/i, url: "https://lovable.dev/?via=phong", youtube: null },
+  { name: "OpenArt", match: /open\s*art/i, url: "https://openart.ai/home/?via=phong", youtube: null },
+  { name: "PitPit", match: /pit\s*pit|pippit/i, url: "https://pippitcreator.pxf.io/Gb0Ngm", youtube: null },
+  { name: "Whop", match: /\bwhop\b/i, url: "https://whop.com/?a=phongtyphu", youtube: null },
 ];
 
-// Tra ve link affiliate dung neu text (tieu de + noi dung tin) nhac toi 1 tool
-// anh Phong dang lam affiliate; khong khop tool nao -> null (khong gan link bua).
+// Tra ve entry tool khop text (tieu de + noi dung tin), hoac null.
+function matchTool(text) {
+  return AFFILIATE_LINKS.find((l) => l.match.test(text || "")) || null;
+}
+
+// Tra ve link affiliate dung neu text nhac toi 1 tool; khong khop -> null.
 function affiliateLinkFor(text) {
-  const hit = AFFILIATE_LINKS.find((l) => l.match.test(text || ""));
+  const hit = matchTool(text);
   return hit ? hit.url : null;
 }
 
-module.exports = { AFFILIATE_LINKS, affiliateLinkFor };
+module.exports = { AFFILIATE_LINKS, affiliateLinkFor, matchTool };
