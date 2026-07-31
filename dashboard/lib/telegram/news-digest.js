@@ -30,17 +30,21 @@ const FALLBACK_IMAGES = [
 const GN = (query) =>
   `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 
+// Uu tien tin NICHE anh Phong quan tam (cong cu thuc chien + AI Influencer),
+// KHONG phai tin ong lon chung chung. Mo rong cua so thoi gian (14-21 ngay) vi
+// cac chu de niche nay khong co tin moi moi ngay.
 const FEEDS = [
-  // Blog chinh chu — tin goc, dang tin cay nhat
-  { name: "OpenAI", url: "https://openai.com/blog/rss.xml" },
-  { name: "Google AI Blog", url: "https://blog.google/technology/ai/rss/" },
-  // Theo doi rieng tung chu de trong tam
-  { name: "Higgsfield", url: GN("\"Higgsfield\" AI video when:7d") },
-  { name: "Lovable", url: GN("\"Lovable\" AI app builder OR vibe coding when:7d") },
-  { name: "AI Influencer", url: GN("\"AI influencer\" OR \"virtual influencer\" when:7d") },
-  { name: "OpenAI", url: GN("OpenAI when:3d") },
-  { name: "Anthropic", url: GN("Anthropic Claude when:3d") },
-  // Tin AI lon noi chung — de khong bo lo su kien tam co nganh
+  // Cong cu trong tam — theo doi sat dong thai
+  { name: "Higgsfield", url: GN('"Higgsfield" AI when:21d') },
+  { name: "Topview", url: GN('"Topview" OR "Topview.ai" AI video when:21d') },
+  { name: "Lovable", url: GN('"Lovable" AI app builder OR "vibe coding" when:21d') },
+  // AI Influencer / nguoi mau ao co suc anh huong quoc te
+  { name: "AI Influencer", url: GN('"AI influencer" OR "virtual influencer" when:21d') },
+  { name: "AI Model", url: GN('"AI model" OR "virtual model" OR "AI generated model" instagram when:21d') },
+  { name: "Faceless AI", url: GN('"faceless" AI content OR AI UGC creator when:21d') },
+  // Kiem tien / affiliate voi AI
+  { name: "Affiliate AI", url: GN('AI affiliate marketing OR "AI automation" money when:14d') },
+  // Vai nguon nganh de khong bo lo su kien lon that su (uu tien THAP trong prompt)
   { name: "TechCrunch", url: "https://techcrunch.com/category/artificial-intelligence/feed/" },
   { name: "VentureBeat", url: "https://venturebeat.com/category/ai/feed/" },
 ];
@@ -74,6 +78,21 @@ function extractImage(block) {
     decoded.match(/<media:thumbnail[^>]+url="(https?:\/\/[^"]+)"/i) ||
     decoded.match(/<img[^>]+src="(https?:\/\/[^"]+)"/i);
   return m ? m[1] : null;
+}
+
+// Chan anh RAC: logo Google News (lh3.googleusercontent), favicon, logo, icon,
+// svg, pixel... -> tra ve true de bo qua, dung anh thuong hieu du phong thay the.
+// Day la ly do truoc day ban tin bi dinh logo Google News: link Google News la
+// link chuyen huong, vao trang GN thi og:image chinh la logo GN.
+function isBadImage(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return true;
+  return (
+    /news\.google\.com/i.test(url) ||
+    /lh[0-9]\.googleusercontent\.com/i.test(url) || // logo Google News
+    /gstatic\.com/i.test(url) ||
+    /\.svg(\?|$)/i.test(url) ||
+    /(favicon|sprite|1x1|pixel|placeholder|default-|logo[-_.]|[-_/]logo|[-_/]icon)/i.test(url)
+  );
 }
 
 // Chuan hoa link de so sanh trung (bo query/tracking param, bo dau / cuoi, thuong hoa)
@@ -164,7 +183,7 @@ async function fetchFreshNews(maxItems = 8) {
 // Nhieu lop: og:image (thu tu attribute bat ky, nhay don/kep) -> twitter:image
 // -> anh <img> dau tien hop le trong noi dung bai (bo icon/logo/avatar/svg).
 async function getArticleImage(item) {
-  if (item.image) return item.image;
+  if (item.image && !isBadImage(item.image)) return item.image;
   try {
     const res = await fetch(item.link, {
       headers: {
@@ -184,17 +203,16 @@ async function getArticleImage(item) {
     ];
     for (const re of metaPatterns) {
       const m = html.match(re);
-      if (m) return m[1].replace(/&amp;/g, "&");
+      if (m && !isBadImage(m[1].replace(/&amp;/g, "&"))) return m[1].replace(/&amp;/g, "&");
     }
 
     // Fallback: quet <img> dau tien co ve la anh noi dung that (bo qua icon/logo/avatar/pixel/svg)
     const imgMatches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)];
     for (const m of imgMatches) {
-      const src = m[1];
-      if (/\.svg(\?|$)/i.test(src)) continue;
-      if (/(logo|icon|avatar|sprite|pixel|1x1)/i.test(src)) continue;
-      if (!/^https?:\/\//i.test(src)) continue;
-      return src.replace(/&amp;/g, "&");
+      const src = m[1].replace(/&amp;/g, "&");
+      if (/(avatar)/i.test(src)) continue;
+      if (isBadImage(src)) continue;
+      return src;
     }
     return null;
   } catch (e) {
@@ -223,7 +241,12 @@ async function sendDailyDigest() {
 
   const systemPrompt =
     `Bạn là biên tập viên bản tin AI cho kênh Telegram cộng đồng "KOL AI GO GLOBAL" (chủ đề: dùng AI phát triển kinh doanh, vươn ra toàn cầu). Độc giả là người Việt làm affiliate marketing, xây doanh nghiệp 1 người, làm AI Influencer — họ cần tin để HÀNH ĐỘNG, không cần tin để biết.\n` +
-    `CHỦ ĐỀ ƯU TIÊN khi chọn tin (theo thứ tự): (1) affiliate marketing và kiếm tiền online; (2) xây dựng doanh nghiệp 1 người bằng AI; (3) AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng; (4) động thái của các công ty: Higgsfield, Topview, Lovable, Anthropic/Claude, Google/Gemini, OpenAI/ChatGPT; (5) gọi vốn và khởi nghiệp AI. Tin không dính chủ đề nào thì chỉ chọn khi thực sự lớn.\n` +
+    `CHỦ ĐỀ ƯU TIÊN khi chọn tin (theo thứ tự, ưu tiên tuyệt đối cho tin THỰC CHIẾN, không phải tin ông lớn):\n` +
+    `(1) Động thái công cụ trong ngách: Higgsfield, Topview, Lovable (ra mắt tính năng, đổi giá, cuộc thi, thương vụ);\n` +
+    `(2) AI Influencer / người mẫu AI / nhân vật ảo có sức ảnh hưởng quốc tế (case thành công, cách kiếm tiền, thương hiệu thuê);\n` +
+    `(3) Affiliate marketing và kiếm tiền online bằng AI; xây doanh nghiệp 1 người bằng AI;\n` +
+    `(4) Công cụ/tính năng AI mới mà người làm nội dung faceless, video AI, UGC tận dụng được ngay.\n` +
+    `HẠN CHẾ tin của các ông lớn (OpenAI, Google/Gemini, Anthropic, Microsoft, Meta...) — CHỈ chọn khi đó là sự kiện CỰC LỚN ảnh hưởng trực tiếp tới cách người làm nghề kiếm tiền, còn tin ra model/nghiên cứu chung chung của họ thì BỎ QUA. Ưu tiên tin ngách thực chiến hơn tin ông lớn.\n` +
     (notesBlock ? `\n${notesBlock}\nNEU co tin nao trong danh sach lien quan truc tiep den ghi chu hien trang tren, UU TIEN chon tin do truoc tien.\n` : "") +
     `Từ danh sách tin được đánh số, chọn DUY NHẤT 1 TIN QUAN TRỌNG NHẤT theo tiêu chí trên.\n` +
     `CHỈ chọn tin THỰC SỰ QUAN TRỌNG: ra mắt sản phẩm/tính năng lớn, thay đổi giá hoặc chính sách, gọi vốn lớn, thương vụ mua bán, thay đổi ảnh hưởng trực tiếp tới cách người làm nghề kiếm tiền. TUYỆT ĐỐI BỎ QUA: tin dạng bàn luận chung chung, bài xếp hạng "top 10 công cụ", tin trùng lặp sự kiện cũ, tin không liên quan (ví dụ "Higgs boson" trong vật lý KHÔNG phải Higgsfield).\n` +
@@ -257,7 +280,8 @@ async function sendDailyDigest() {
 
   // Luon gui kem anh: neu khong lay duoc anh that tu bai bao, dung anh
   // thuong hieu du phong (khong bao gio gui tin thuan text).
-  const realImage = await getArticleImage(src);
+  let realImage = await getArticleImage(src);
+  if (isBadImage(realImage)) realImage = null; // chan lan cuoi truoc khi gui
   const image = realImage || FALLBACK_IMAGES[Math.floor(Date.now() / 1000) % FALLBACK_IMAGES.length];
   await sendPhotoToChannel(image, caption);
 
