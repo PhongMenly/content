@@ -223,6 +223,23 @@ async function removeLibraryImage(id) {
   return rows[0] || null;
 }
 
+// Danh dau anh da lay dung cho 1 bai -> lan sau khong lay lai nua.
+async function markLibraryImageUsed(url, postId) {
+  const rows = await sql.query(
+    "UPDATE image_library SET used_at = $1, used_by_post_id = $2 WHERE url = $3 RETURNING *",
+    [now(), postId || null, url]
+  );
+  return rows[0] || null;
+}
+
+// Bo danh dau (khi go anh khoi bai, hoac khi muon cho phep dung lai ca kho).
+async function resetLibraryImageUsage(folder = null) {
+  const rows = folder
+    ? await sql.query("UPDATE image_library SET used_at = NULL, used_by_post_id = NULL WHERE folder = $1 RETURNING id", [folder])
+    : await sql.query("UPDATE image_library SET used_at = NULL, used_by_post_id = NULL RETURNING id");
+  return rows.length;
+}
+
 async function getKv(key, defaultValue = null) {
   const rows = await sql.query("SELECT value FROM bot_kv WHERE key = $1", [key]);
   if (!rows[0]) return defaultValue;
@@ -285,6 +302,8 @@ module.exports = {
   addLibraryImage,
   listLibraryImages,
   removeLibraryImage,
+  markLibraryImageUsed,
+  resetLibraryImageUsage,
   getKv,
   setKv,
   listBrandProfiles,

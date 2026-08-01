@@ -2,7 +2,7 @@ const express = require("express");
 const db = require("../db/client");
 const { getPostInsights } = require("../lib/facebook");
 const { sendToMakeForPosting } = require("../lib/make");
-const { sendMessage, sendPhoto } = require("../lib/telegram/telegram-api");
+const { sendMessage, sendPhoto, sendVideo } = require("../lib/telegram/telegram-api");
 const { checkForNewDrafts, checkForPostResults } = require("../lib/telegram/review-flow");
 const { generateReport } = require("../lib/telegram/insights");
 const { runBackup } = require("../lib/backup");
@@ -230,6 +230,20 @@ router.get("/self-learn", checkCronAuth, async (req, res) => {
     const { runDailySelfLearn } = require("../lib/telegram/self-learn");
     const result = await runDailySelfLearn({
       sendMessage: (text) => sendMessage(OWNER_CHAT_ID, text),
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// May tu lung bai X (Twitter) hot ve AI co video -> Nhi viet nhap -> gui anh Phong duyet
+router.get("/x-discover", checkCronAuth, async (req, res) => {
+  try {
+    const { proposeXPost } = require("../lib/telegram/x-repost");
+    const result = await proposeXPost({
+      sendMessage: (t) => sendMessage(OWNER_CHAT_ID, t),
+      sendVideo: (u, c) => sendVideo(OWNER_CHAT_ID, u, c),
     });
     res.json({ ok: true, ...result });
   } catch (err) {

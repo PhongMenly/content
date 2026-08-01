@@ -61,34 +61,50 @@ async function completeOnce(systemPrompt, userPrompt) {
 
 // Tu chon 1 anh tu kho cho bai moi viet: uu tien anh su kien (nguoi that),
 // tranh lap lai anh cua 30 bai gan nhat
-// Kho anh theo persona: uyen_linh -> "KOLAI" (anh nhan vat), phong_menly -> "Su kien".
-function matchesFolder(img, wantKol) {
-  const folder = (img.folder || "").toUpperCase().replace(/\s+/g, "");
-  return wantKol ? folder.includes("KOLAI") : folder.includes("SUKIEN");
+// Kho anh theo persona. Uyen Linh CHI duoc lay muc KOLAI — khong bao gio doi sang
+// muc khac, du kho co can. Phong Menly lay muc "Su kien".
+const FOLDER_BY_BRAND = { uyen_linh: "KOLAI", phong_menly: "SUKIEN" };
+const STRICT_BRANDS = ["uyen_linh"]; // het anh thi bao, tuyet doi khong muon muc khac
+
+function normFolder(folder) {
+  return (folder || "").toUpperCase().replace(/\s+/g, "");
 }
 
-async function pickLibraryImage(brandKey) {
+function wantedFolder(brandKey) {
+  return FOLDER_BY_BRAND[brandKey] || FOLDER_BY_BRAND.phong_menly;
+}
+
+async function pickLibraryImage(brandKey, postId) {
   const imgs = await db.listLibraryImages();
   if (!imgs.length) return null;
-  const recentUrls = (await db.listPosts({})).slice(0, 30).map((p) => p.image_path).filter(Boolean);
-  const wantKol = brandKey && brandKey !== "phong_menly";
 
-  // LOC MUC TRUOC, roi moi tranh trung. Truoc day lam nguoc: loc "chua dung" tren
-  // toan bo kho roi moi loc muc — het anh chua dung trong dung muc la am tham nhay
-  // sang muc cua persona kia (bai Uyen Linh bi gan anh su kien cua anh Phong).
-  const inFolder = imgs.filter((i) => matchesFolder(i, wantKol));
-  if (inFolder.length) {
-    const fresh = inFolder.filter((i) => !recentUrls.includes(i.url));
-    // Het anh moi trong muc -> dung lai anh cu CUNG MUC, tuyet doi khong doi muc.
-    const pool = fresh.length ? fresh : inFolder;
-    return pool[Math.floor(Math.random() * pool.length)].url;
+  const want = wantedFolder(brandKey);
+  const inFolder = imgs.filter((i) => normFolder(i.folder).includes(want));
+
+  // Anh "con moi" = chua bao gio bi danh dau da lay. Truoc day chi suy ra tu 30 bai
+  // gan nhat (cua so truot) nen sau 30 bai la anh quay vong, dang lai anh cu.
+  let pool = inFolder.filter((i) => !i.used_at);
+
+  if (!pool.length) {
+    if (!inFolder.length && STRICT_BRANDS.includes(brandKey)) {
+      console.warn(`[pickLibraryImage] Kho khong co anh muc ${want} cho ${brandKey} — khong gan anh`);
+      return null;
+    }
+    if (!inFolder.length) {
+      console.warn(`[pickLibraryImage] Kho khong co anh muc ${want} — dung tam anh khac`);
+      pool = imgs.filter((i) => !i.used_at);
+      if (!pool.length) pool = imgs;
+    } else {
+      // Het anh moi trong muc -> dung lai anh cu NHUNG VAN CUNG MUC, uu tien anh
+      // lau chua dung nhat. Khong bao gio nhay sang muc cua persona khac.
+      console.warn(`[pickLibraryImage] Da dung het anh moi muc ${want} — dung lai anh cu lau nhat`);
+      pool = [...inFolder].sort((a, b) => (a.used_at || 0) - (b.used_at || 0)).slice(0, 5);
+    }
   }
 
-  // Chi khi kho khong co anh nao dung muc moi danh phai lay tam anh khac.
-  console.warn(`[pickLibraryImage] Kho khong co anh muc ${wantKol ? "KOLAI" : "Su kien"} — dung tam anh khac`);
-  const fallback = imgs.filter((i) => !recentUrls.includes(i.url));
-  const pool = fallback.length ? fallback : imgs;
-  return pool[Math.floor(Math.random() * pool.length)].url;
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  await db.markLibraryImageUsed(chosen.url, postId);
+  return chosen.url;
 }
 
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay
@@ -122,7 +138,7 @@ async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
 
   // Bai bat buoc co anh moi duyet/dang duoc -> tu gan anh tu kho neu chua co
   if (!post.image_path) {
-    const imageUrl = await pickLibraryImage(brandKey);
+    const imageUrl = await pickLibraryImage(brandKey, post.id);
     if (imageUrl) {
       await db.updatePost(post.id, { image_path: imageUrl });
       await db.logHistory({ postId: post.id, eventType: "image_uploaded", note: "Tu gan anh tu kho khi viet bai", actor: "system" });
@@ -147,4 +163,4 @@ async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
   return updated;
 }
 
-module.exports = { completeOnce, draftTopic };
+module.exports = { completeOnce, draftTopic, pickLibraryImage };

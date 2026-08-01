@@ -122,4 +122,90 @@ async function handleXApproval(text, { sendMessage }) {
   return null;
 }
 
-module.exports = { hasXLink, handleXLink, handleXApproval };
+// ===== TU DONG LUNG BAI X HOT VE AI (qua Apify) =====
+// X chan tim kiem tu dong an danh, nhung actor Apify kaitoeasyapi (chay duoc tren
+// goi free) van search duoc theo tu khoa + loc chi bai co VIDEO. Nhi tu tim bai
+// AI viral moi -> viet nhap -> gui anh Phong duyet.
+const APIFY_ACTOR = "kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest";
+const SENT_IDS_KEY = "x_repost_sent_ids";
+
+// Lay danh sach ban mp4 (uu tien bitrate cao) tu 1 tweet, hoac null neu khong co video.
+function videoVariants(tweet) {
+  const media = (tweet.extendedEntities && tweet.extendedEntities.media) || [];
+  for (const m of media) {
+    if (m.video_info && Array.isArray(m.video_info.variants)) {
+      const mp4 = m.video_info.variants
+        .filter((v) => v.content_type === "video/mp4")
+        .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+      if (mp4.length) return mp4;
+    }
+  }
+  return null;
+}
+
+// Chon ban mp4 <= 20MB (gioi han Telegram gui qua URL); khong ro size thi lay ban nho nhat.
+async function pickSendableMp4(variants) {
+  for (const v of variants) {
+    try {
+      const h = await fetch(v.url, { method: "HEAD" });
+      const size = Number(h.headers.get("content-length") || 0);
+      if (size > 0 && size <= 20 * 1024 * 1024) return v.url;
+    } catch (e) { /* thu ban tiep */ }
+  }
+  return variants.length ? variants[variants.length - 1].url : null;
+}
+
+// Tim bai X viral ve AI co video (14 ngay gan day, du luot thich).
+async function searchViralAiVideos() {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) throw new Error("Thieu APIFY_TOKEN");
+  const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const input = {
+    twitterContent: '(Higgsfield OR HeyGen OR ElevenLabs OR Topview OR "Jogg AI" OR Base44 OR "AI video" OR "AI film" OR "AI influencer")',
+    queryType: "Videos",
+    lang: "en",
+    "min_faves": 500,
+    maxItems: 25,
+    since,
+  };
+  const r = await fetch(
+    `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${token}&timeout=150`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }
+  );
+  if (!r.ok) throw new Error(`Apify loi HTTP ${r.status}`);
+  const items = await r.json();
+  return (Array.isArray(items) ? items : []).filter((t) => t && t.id && videoVariants(t));
+}
+
+// May tu lung: tim bai X hot MOI -> Nhi viet nhap -> gui anh Phong duyet.
+async function proposeXPost({ sendMessage, sendVideo }) {
+  const sent = (await db.getKv(SENT_IDS_KEY)) || [];
+  const sentSet = new Set(sent);
+
+  const tweets = await searchViralAiVideos();
+  const fresh = tweets
+    .filter((t) => !sentSet.has(t.id))
+    .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+  if (!fresh.length) {
+    if (sendMessage) await sendMessage("Hom nay chua tim thay bai X moi ve AI co video de de xuat.");
+    return { proposed: 0 };
+  }
+
+  const t = fresh[0];
+  const videoUrl = await pickSendableMp4(videoVariants(t));
+  const handle = (t.author && (t.author.userName || t.author.screenName)) || "";
+  const tweetUrl = t.url || t.twitterUrl || `https://x.com/${handle}/status/${t.id}`;
+  const body = await writeCaption({ text: t.text || "", handle });
+  const caption = `${body}\n\n(Nguon: X @${handle} — ${t.likeCount || 0} luot thich)\n${tweetUrl}`;
+
+  await db.setKv(PENDING_KEY, { id: t.id, handle, tweetUrl, video: videoUrl, caption, at: Date.now() });
+  // Danh dau da xet (du duyet hay khong cung khong de xuat lai bai nay)
+  await db.setKv(SENT_IDS_KEY, [...sent, t.id].slice(-300));
+
+  await sendMessage("NHI TIM DUOC BAI X HOT VE AI — duyet dang len kenh cong dong:\n\n" + caption);
+  if (videoUrl) await sendVideo(videoUrl, "Video se dang kem (xem thu)");
+  await sendMessage('Reply "dang" de dang len kenh, "sua: ..." de sua loi, "bo" de bo.');
+  return { proposed: 1, id: t.id, likes: t.likeCount };
+}
+
+module.exports = { hasXLink, handleXLink, handleXApproval, proposeXPost, searchViralAiVideos };

@@ -78,3 +78,8 @@ CREATE TABLE IF NOT EXISTS brand_profiles (
 );
 
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS brand_key TEXT;
+
+-- Danh dau anh da duoc dung cho bai nao. Truoc day chi suy ra tu 30 bai gan nhat
+-- (cua so truot) nen anh quay vong lai sau 30 bai -> bi trung anh.
+ALTER TABLE image_library ADD COLUMN IF NOT EXISTS used_at BIGINT;
+ALTER TABLE image_library ADD COLUMN IF NOT EXISTS used_by_post_id INTEGER;
