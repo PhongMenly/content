@@ -106,7 +106,8 @@ async function proposeTopics({ sendMessage, brandKey = DEFAULT_KEY, count = 5 })
   const writerPreamble =
     brandKey === DEFAULT_KEY
       ? UYEN_NHI_BRAIN
-      : `Ban la chuyen gia chien luoc noi dung. De xuat chu de CHI dua tren ho so nhan vat duoi day. TUYET DOI khong dung dinh vi, san pham hay ten "Phong Menly" — nhan vat nay doc lap.`;
+      : `Ban la chuyen gia chien luoc noi dung. De xuat chu de CHI dua tren ho so nhan vat duoi day. TUYET DOI khong dung dinh vi, san pham hay ten "Phong Menly" — nhan vat nay doc lap.\n` +
+        `CAM LAN CHU DE: khong de xuat chu de kieu MMO / affiliate / "kiem X$ dau tien" / day cach code / xay he thong ban hang / san xuat noi dung hang loat — do la dia hat cua persona khac, KHONG phai cua nhan vat nay. Moi chu de phai roi dung vao 1 trong ${pillars.length} tru cot: ${pillars.join(", ")}. Chu de nao khong khop tru cot nao thi bo, de xuat cai khac.`;
   const systemPrompt =
     writerPreamble +
     `\n\n===== DINH VI THUONG HIEU (BAT BUOC BAM THEO) =====\n` +

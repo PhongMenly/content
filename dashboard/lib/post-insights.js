@@ -40,8 +40,14 @@ function bodySnippet(body) {
   return (body || "").replace(/^#.*\n+/, "").slice(0, 300);
 }
 
-async function getContentInsights() {
-  const posted = await db.listPostedPosts();
+// brandKey: chi rut insight tu bai CUA CHINH persona do. Truoc day gop chung moi
+// persona -> bai thang cua anh Phong (MMO/affiliate) bi dua vao prompt viet bai
+// Uyen Linh kem cau "uu tien lap lai pattern hook nay" -> lai giong sang nhau.
+async function getContentInsights(brandKey = null) {
+  const all = await db.listPostedPosts();
+  const posted = brandKey
+    ? all.filter((p) => (p.brand_key || "phong_menly") === brandKey)
+    : all;
   const withScore = posted.map(scorePost).sort((a, b) => b.total_engagement - a.total_engagement);
   const postedCount = withScore.length;
 

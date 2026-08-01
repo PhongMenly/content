@@ -47,7 +47,16 @@ async function listBrandProfiles() {
 async function getBrandProfile(key = DEFAULT_KEY) {
   await migrateLegacyProfileOnce();
   const row = await db.getBrandProfileByKey(key);
-  return (row && row.text) || DEFAULT_PROFILE;
+  if (row && row.text) return row.text;
+
+  // KHONG duoc lay ho so Phong Menly lam do dung cho persona khac. Truoc day
+  // fallback im lang ve DEFAULT_PROFILE: chi can tra ho so Uyen Linh hut mot lan
+  // (row thieu, hoac DB loi thoang qua) la AI viet chu de MMO/affiliate cua anh
+  // Phong duoi ten Uyen Linh. Tha bao loi va dung han con hon de xuat sai persona.
+  if (key !== DEFAULT_KEY) {
+    throw new Error(`Chua co ho so thuong hieu cho persona "${key}" — khong the viet bai. Vao Dashboard > Ho so thuong hieu de them.`);
+  }
+  return DEFAULT_PROFILE;
 }
 
 async function getBrandProfileMeta(key = DEFAULT_KEY) {

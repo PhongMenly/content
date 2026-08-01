@@ -110,8 +110,8 @@ async function pickLibraryImage(brandKey, postId) {
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay
 async function draftTopic(post, { sendMessage, sendPhoto } = {}) {
   const { getBrandProfile, DEFAULT_KEY } = require("../brand-profile");
-  const insights = await getContentInsights();
   const brandKey = post.brand_key || DEFAULT_KEY;
+  const insights = await getContentInsights(brandKey);
   const brandProfile = await getBrandProfile(brandKey);
   // Persona khac (vd uyen_linh): khong dung bo nao Uyen Nhi (chua dinh vi + san pham
   // + link cua Phong Menly) — viet thuan tuy theo ho so nhan vat, tranh lan giong
