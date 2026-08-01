@@ -61,20 +61,34 @@ async function completeOnce(systemPrompt, userPrompt) {
 
 // Tu chon 1 anh tu kho cho bai moi viet: uu tien anh su kien (nguoi that),
 // tranh lap lai anh cua 30 bai gan nhat
+// Kho anh theo persona: uyen_linh -> "KOLAI" (anh nhan vat), phong_menly -> "Su kien".
+function matchesFolder(img, wantKol) {
+  const folder = (img.folder || "").toUpperCase().replace(/\s+/g, "");
+  return wantKol ? folder.includes("KOLAI") : folder.includes("SUKIEN");
+}
+
 async function pickLibraryImage(brandKey) {
   const imgs = await db.listLibraryImages();
   if (!imgs.length) return null;
   const recentUrls = (await db.listPosts({})).slice(0, 30).map((p) => p.image_path).filter(Boolean);
-  const unused = imgs.filter((i) => !recentUrls.includes(i.url));
-  const pool = unused.length ? unused : imgs;
-  // Chon kho anh theo persona: uyen_linh -> KOLAI (anh Uyen Linh), Phong -> Su kien
   const wantKol = brandKey && brandKey !== "phong_menly";
-  const preferred = pool.filter((i) => {
-    const folder = (i.folder || "").toUpperCase();
-    return wantKol ? folder.includes("KOLAI") : folder.includes("SU KIEN");
-  });
-  const finalPool = preferred.length ? preferred : pool;
-  return finalPool[Math.floor(Math.random() * finalPool.length)].url;
+
+  // LOC MUC TRUOC, roi moi tranh trung. Truoc day lam nguoc: loc "chua dung" tren
+  // toan bo kho roi moi loc muc — het anh chua dung trong dung muc la am tham nhay
+  // sang muc cua persona kia (bai Uyen Linh bi gan anh su kien cua anh Phong).
+  const inFolder = imgs.filter((i) => matchesFolder(i, wantKol));
+  if (inFolder.length) {
+    const fresh = inFolder.filter((i) => !recentUrls.includes(i.url));
+    // Het anh moi trong muc -> dung lai anh cu CUNG MUC, tuyet doi khong doi muc.
+    const pool = fresh.length ? fresh : inFolder;
+    return pool[Math.floor(Math.random() * pool.length)].url;
+  }
+
+  // Chi khi kho khong co anh nao dung muc moi danh phai lay tam anh khac.
+  console.warn(`[pickLibraryImage] Kho khong co anh muc ${wantKol ? "KOLAI" : "Su kien"} — dung tam anh khac`);
+  const fallback = imgs.filter((i) => !recentUrls.includes(i.url));
+  const pool = fallback.length ? fallback : imgs;
+  return pool[Math.floor(Math.random() * pool.length)].url;
 }
 
 // Viet full bai cho 1 topic (status = 'idea') -> chuyen 'ready_for_review' + bao Telegram ngay

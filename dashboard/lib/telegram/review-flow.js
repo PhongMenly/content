@@ -8,8 +8,12 @@ function defaultState() {
 }
 
 async function loadState() {
-  const state = (await db.getKv(STATE_KEY)) || defaultState();
-  if (!state.reportedPostIds) state.reportedPostIds = [];
+  const raw = await db.getKv(STATE_KEY);
+  // Khoa an toan: state hong (chuoi, null, sai kieu) -> dung lai mac dinh thay vi
+  // vo dau vao undefined.includes() lam chet ca luong viet bai.
+  const state = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : defaultState();
+  if (!Array.isArray(state.sentPostIds)) state.sentPostIds = [];
+  if (!Array.isArray(state.reportedPostIds)) state.reportedPostIds = [];
   return state;
 }
 

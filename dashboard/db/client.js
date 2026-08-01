@@ -229,10 +229,16 @@ async function getKv(key, defaultValue = null) {
   const v = rows[0].value;
   // postgres.js (Supabase) tra cot JSONB ve dang CHUOI JSON, khong tu parse nhu
   // driver Neon cu. Parse lai o day de moi noi goi getKv van nhan object/array.
-  if (typeof v === "string") {
-    try { return JSON.parse(v); } catch { return v; }
+  // Boc NHIEU lop: neu co lan nao value bi stringify chong len nhau, moi vong
+  // doc-ghi sau do lai boc them 1 lop -> state phinh thanh chuoi escape khong dung
+  // duoc nua (da lam hong bot_review_state, gay loi "reading 'includes'").
+  let out = v;
+  for (let i = 0; i < 10 && typeof out === "string"; i++) {
+    const t = out.trim();
+    if (!t || !/^[[{"]/.test(t)) break;
+    try { out = JSON.parse(t); } catch { break; }
   }
-  return v;
+  return out;
 }
 
 async function setKv(key, value) {
