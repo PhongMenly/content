@@ -251,11 +251,16 @@ async function getKv(key, defaultValue = null) {
   // duoc nua (da lam hong bot_review_state, gay loi "reading 'includes'").
   let out = v;
   for (let i = 0; i < 10 && typeof out === "string"; i++) {
-    const t = out.trim();
-    if (!t || !/^[[{"]/.test(t)) break;
-    try { out = JSON.parse(t); } catch { break; }
+    let parsed;
+    // Phai parse ca gia tri vo huong (null/true/so), khong chi object/mang: gia tri
+    // null luu xuong thanh chuoi "null", neu khong parse thi tra ve chuoi "null"
+    // — truthy — khien code goi tuong la CON du lieu (da lam bai X treo gia, nuot
+    // sach lenh "duyet ca" cua anh Phong).
+    try { parsed = JSON.parse(out); } catch { break; }
+    if (typeof parsed === "string" && parsed === out) break;
+    out = parsed;
   }
-  return out;
+  return out === undefined ? defaultValue : out;
 }
 
 async function setKv(key, value) {

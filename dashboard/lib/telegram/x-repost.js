@@ -97,9 +97,30 @@ async function handleXLink(text, { sendMessage, sendVideo, sendPhoto }) {
 
 // Duyet/sua/huy bai X dang cho. Tra ve chuoi ket qua, hoac null neu khong phai
 // lenh cho X (de cac luong khac xu ly tiep).
+// Bai X treo qua lau -> bo han. Truoc day khong het han: mot bai X treo tu hom
+// truoc van chan moi lenh "duyet" cua anh Phong o cac ngay sau.
+const PENDING_TTL_MS = 6 * 3600 * 1000;
+
+// "duyet ca", "duyet het", "duyet 12" la lenh cua luong DUYET BAI NHAP, khong phai
+// bai X. Truoc day regex cua X bat moi cau bat dau bang "duyet" nen bai X treo
+// nuot sach lenh duyet bai -> anh Phong go "duyet ca" ma bai khong he len lich.
+const SCOPE_HINT = /(\bcả\b|\bca\b|\bhết\b|\bhet\b|\btất\b|\btat\b|\btoàn\b|\btoan\b|\d)/i;
+const X_HINT = /\b(x|twitter|tweet)\b/i;
+
+function isXCommand(t, verbRegex) {
+  if (!verbRegex.test(t)) return false;
+  // Cau co pham vi ("ca"/"het") hoac co so -> chi tinh la lenh cho X khi noi RO X.
+  return SCOPE_HINT.test(t) ? X_HINT.test(t) : true;
+}
+
 async function handleXApproval(text, { sendMessage }) {
   const pending = await db.getKv(PENDING_KEY);
   if (!pending) return null;
+  const at = Number(pending.at);
+  if (!Number.isFinite(at) || Date.now() - at > PENDING_TTL_MS) {
+    await db.setKv(PENDING_KEY, null);
+    return null;
+  }
   const t = (text || "").trim();
 
   if (/^s(ử|u)a:\s*/i.test(t)) {
@@ -109,13 +130,13 @@ async function handleXApproval(text, { sendMessage }) {
     await sendMessage("Da sua loi. Ban moi:\n\n" + caption + '\n\nReply "dang" de dang, "bo" de huy.');
     return " ";
   }
-  if (/^(đăng|dang|duyệt|duyet|ok|oke|gửi|gui)\b/i.test(t)) {
+  if (isXCommand(t, /^(đăng|dang|duyệt|duyet|ok|oke|gửi|gui)\b/i)) {
     if (pending.video) await sendVideoToChannel(pending.video, pending.caption);
     else if (pending.photo) await sendPhotoToChannel(pending.photo, pending.caption);
     await db.setKv(PENDING_KEY, null);
     return "Da dang bai X len kenh cong dong.";
   }
-  if (/^(bỏ|bo|huỷ|huy|khong|không)\b/i.test(t)) {
+  if (isXCommand(t, /^(bỏ|bo|huỷ|huy|khong|không)\b/i)) {
     await db.setKv(PENDING_KEY, null);
     return "Da huy bai X, khong dang.";
   }
