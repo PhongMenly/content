@@ -160,8 +160,11 @@ async function searchViralAiVideos() {
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("Thieu APIFY_TOKEN");
   const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  // BAM DUNG CHU DE anh Phong chot: 6 tool + AI Influencer/nguoi mau AI quoc te.
+  // KHONG dung "AI video" chung chung (keo ve tin lac de).
   const input = {
-    twitterContent: '(Higgsfield OR HeyGen OR ElevenLabs OR Topview OR "Jogg AI" OR Base44 OR "AI video" OR "AI film" OR "AI influencer")',
+    twitterContent:
+      '(Higgsfield OR HeyGen OR ElevenLabs OR Topview OR "Jogg AI" OR Base44 OR "AI influencer" OR "virtual influencer" OR "virtual model" OR "AI model" OR "AI actress" OR "AI filmmaking" OR "AI film")',
     queryType: "Videos",
     lang: "en",
     "min_faves": 500,
