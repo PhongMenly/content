@@ -43,10 +43,13 @@ async function runIntent(text, targetChat) {
   // danh sach danh so moi. Truoc day khong co nhanh nay nen cau lenh roi xuong lop
   // chat, AI tra loi "da day lenh cho he thong" trong khi thuc te khong chay gi.
   if (intent.action === "propose_topics") {
-    const r = await proposeOrListTopics({ sendMessage: (t) => sendMessage(targetChat, t) });
-    return r.proposed
-      ? `Da de xuat ${r.proposed} chu de moi ben tren. Reply "chon 1,3" de Nhi viet full bai.`
-      : `Dang co ${r.listed} chu de cho san (danh sach ben tren). Reply "chon 1,3" de viet full bai.`;
+    // Mac dinh uyen_linh — dung persona cua Facebook Page dang ket noi.
+    const brandKey = /phong/i.test(text) ? "phong_menly" : "uyen_linh";
+    const r = await proposeOrListTopics({ sendMessage: (t) => sendMessage(targetChat, t), brandKey });
+    return (r.proposed
+      ? `Da de xuat ${r.proposed} chu de moi cho persona "${brandKey}".`
+      : `Dang co ${r.listed} chu de cho san cua persona "${brandKey}".`) +
+      ` Reply "chon 1,3" de Nhi viet full bai.`;
   }
 
   if (intent.action === "draft" && intent.id) {
@@ -205,20 +208,27 @@ async function handleMessage(message) {
     return;
   }
 
-  // /chude — de xuat lo chu de MOI ngay tai cho (khong phai cho cron thu 2 hang tuan).
-  // Neu dang con chu de cho thi liet ke lai va danh so lai cho dung.
-  if (text === "/chude" || text === "/chude moi" || text === "/dexuatmoi") {
+  // /chude [persona] — de xuat lo chu de MOI ngay tai cho (khong cho cron hang tuan).
+  // BAT BUOC neu ro persona: Facebook Page dang ket noi la cua Uyen Linh, nen mac
+  // dinh la uyen_linh. Truoc day mac dinh phong_menly -> ca lo bai chu de/giong anh
+  // Phong nam trong hang doi cua page Uyen Linh, kem ca anh su kien cua anh Phong.
+  const chudeMatch = text.match(/^\/(?:chude|dexuatmoi)(?:\s+(.+))?$/i);
+  if (chudeMatch) {
     if (!isOwner) {
       await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
       return;
     }
+    const arg = (chudeMatch[1] || "").trim().toLowerCase();
+    const brandKey = /phong/.test(arg) ? "phong_menly" : "uyen_linh";
     try {
       const send = (t) => sendMessage(targetChat, t);
-      const r = await proposeOrListTopics({ sendMessage: send });
+      const r = await proposeOrListTopics({ sendMessage: send, brandKey });
       await send(
-        r.proposed
-          ? `Da de xuat ${r.proposed} chu de moi. Reply "chon 1,3" de Nhi viet full bai.`
-          : `Dang co ${r.listed} chu de cho san. Reply "chon 1,3" de viet full bai.`
+        (r.proposed
+          ? `Da de xuat ${r.proposed} chu de moi cho persona "${brandKey}".`
+          : `Dang co ${r.listed} chu de cho san cua persona "${brandKey}".`) +
+          `\nReply "chon 1,3" de Nhi viet full bai.` +
+          (brandKey === "uyen_linh" ? `\n(Muon chu de cua anh Phong thi go: /chude phong)` : "")
       );
     } catch (err) {
       console.error("[/chude] Loi:", err.message);
