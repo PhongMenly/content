@@ -1,5 +1,6 @@
 const express = require("express");
-const { sendMessage, sendPhoto, sendTyping } = require("../lib/telegram/telegram-api");
+const { sendMessage, sendPhoto, sendVideo, sendTyping } = require("../lib/telegram/telegram-api");
+const { hasXLink, handleXLink, handleXApproval } = require("../lib/telegram/x-repost");
 const { callAi } = require("../lib/telegram/chat");
 const { logConversation, generateReport } = require("../lib/telegram/insights");
 const { learn, getMemoryReport } = require("../lib/telegram/memory");
@@ -237,6 +238,22 @@ async function handleMessage(message) {
         sendMessage: (t) => sendMessage(targetChat, t),
         sendPhoto: (url, caption) => sendPhoto(targetChat, url, caption),
       };
+
+      // 0a) Dan link X (Twitter) -> Nhi lay video, viet nhap, gui duyet
+      if (hasXLink(text)) {
+        await handleXLink(text, {
+          sendMessage: (t) => sendMessage(targetChat, t),
+          sendVideo: (u, c) => sendVideo(targetChat, u, c),
+          sendPhoto: (u, c) => sendPhoto(targetChat, u, c),
+        });
+        return;
+      }
+      // 0b) Duyet/sua/huy bai X dang cho duyet (uu tien truoc cac luong khac)
+      const xReply = await handleXApproval(text, { sendMessage: (t) => sendMessage(targetChat, t) });
+      if (xReply) {
+        if (xReply.trim()) await sendMessage(targetChat, xReply);
+        return;
+      }
 
       // 1) Lenh chon chu de dang cu phap cung ("chon 1,3" / "bo 2")
       const topicReply = await handleTopicReply(text, handlers);
