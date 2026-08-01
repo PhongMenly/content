@@ -23,6 +23,22 @@ async function sendPhoto(chatId, photoUrl, caption) {
   return res.json();
 }
 
+// Gui VIDEO thay bang URL mp4 truc tiep -> Telegram phat ngay trong bai (native),
+// khong phai link mo ra ngoai. Video URL gioi han ~20MB.
+async function sendVideo(chatId, videoUrl, caption) {
+  const res = await fetch(`${TELEGRAM_URL}/sendVideo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      video: videoUrl,
+      caption: (caption || "").slice(0, 1024),
+      supports_streaming: true,
+    }),
+  });
+  return res.json();
+}
+
 async function sendTyping(chatId) {
   const params = new URLSearchParams({ chat_id: chatId, action: "typing" });
   await fetch(`${TELEGRAM_URL}/sendChatAction?${params}`);
@@ -42,4 +58,4 @@ async function getWebhookInfo() {
   return res.json();
 }
 
-module.exports = { sendMessage, sendPhoto, sendTyping, setWebhook, getWebhookInfo, deleteMessage };
+module.exports = { sendMessage, sendPhoto, sendVideo, sendTyping, setWebhook, getWebhookInfo, deleteMessage };

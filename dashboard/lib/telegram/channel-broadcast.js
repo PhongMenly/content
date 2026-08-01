@@ -6,7 +6,7 @@
  * Bai cua cac persona khac (vd Uyen Linh - lifestyle) KHONG phu hop chu de kenh nen khong dua vao day.
  * Bot @uyennhiCreator_bot phai la ADMIN cua kenh (co quyen Post Messages).
  */
-const { sendMessage, sendPhoto } = require("./telegram-api");
+const { sendMessage, sendPhoto, sendVideo } = require("./telegram-api");
 const { DEFAULT_KEY } = require("../brand-profile");
 
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "-1004352564538";
@@ -40,6 +40,13 @@ async function sendLinkPreviewToChannel(text) {
   return result;
 }
 
+// Gui VIDEO thật (file mp4) -> Telegram phat ngay trong bai, khong mo ra ngoai.
+async function sendVideoToChannel(videoUrl, caption) {
+  const result = await sendVideo(CHANNEL_ID, videoUrl, caption);
+  assertOk(result, "gui video");
+  return result;
+}
+
 async function broadcastPostToChannel(post) {
   // Kenh chi danh cho persona Phong Menly (mac dinh) + ban tin AI.
   // Bai brand_key khac (vd "uyen_linh") khong dung chu de kenh nen bo qua.
@@ -55,4 +62,4 @@ async function broadcastPostToChannel(post) {
   }
 }
 
-module.exports = { sendToChannel, sendPhotoToChannel, sendLinkPreviewToChannel, broadcastPostToChannel, CHANNEL_ID };
+module.exports = { sendToChannel, sendPhotoToChannel, sendLinkPreviewToChannel, sendVideoToChannel, broadcastPostToChannel, CHANNEL_ID };

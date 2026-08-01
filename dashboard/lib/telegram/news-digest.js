@@ -8,7 +8,7 @@
  */
 const db = require("../../db/client");
 const { completeOnce } = require("./draft");
-const { sendPhotoToChannel, sendLinkPreviewToChannel } = require("./channel-broadcast");
+const { sendPhotoToChannel, sendVideoToChannel } = require("./channel-broadcast");
 const { getSystemNotes, formatNotesBlock } = require("./system-notes");
 
 const SENT_KEY = "ai_news_sent_links";
@@ -49,17 +49,28 @@ const FEEDS = [
 // Lovable o day bi sai). Tin nhac toi tool nao -> dinh kem link tuong ung.
 const { affiliateLinkFor, matchTool } = require("./affiliate-links");
 
-// Lay video MOI NHAT tren kenh YouTube chinh thuc cua 1 tool (qua RSS, khong can
-// API key). Dung de gan video demo that vao ban tin thay cho anh tinh.
-async function getToolLatestVideo(channelId) {
-  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+// Lay video mp4 demo tu TRANG CHU tool -> Telegram phat truc tiep trong bai
+// (native, khong mo ra ngoai nhu link YouTube). Chi nhan mp4 that va <= 19MB
+// (gioi han gui video qua URL cua Telegram).
+async function getToolDemoVideo(site) {
+  const res = await fetch(site, {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" },
+  });
   if (!res.ok) return null;
-  const xml = await res.text();
-  const first = xml.split("<entry>")[1] || "";
-  const id = (first.match(/<yt:videoId>([^<]+)<\/yt:videoId>/) || [])[1];
-  const title = decodeEntities((first.match(/<title>([^<]*)<\/title>/) || [])[1] || "");
-  if (!id) return null;
-  return { id, title, url: `https://www.youtube.com/watch?v=${id}` };
+  const html = await res.text();
+  const found = [...html.matchAll(/https?:\/\/[^"'\s\\]+\.mp4[^"'\s\\]*/gi)].map((m) => m[0]);
+  const uniq = [...new Set(found)].slice(0, 6);
+  for (const url of uniq) {
+    try {
+      const h = await fetch(url, { method: "HEAD" });
+      const type = h.headers.get("content-type") || "";
+      const size = Number(h.headers.get("content-length") || 0);
+      if (/video\/mp4/i.test(type) && size > 0 && size <= 19 * 1024 * 1024) return url;
+    } catch (e) {
+      /* thu url tiep theo */
+    }
+  }
+  return null;
 }
 
 function decodeEntities(s) {
@@ -279,23 +290,21 @@ async function sendDailyDigest() {
   const tool = matchTool(matchText);
   const affiliate = tool ? tool.url : null;
 
-  // Neu tin ve tool co kenh YouTube -> gan VIDEO demo moi nhat, Telegram PHAT
-  // video xem luon trong bai (khong dung anh tinh). Tin khong co video (vd AI
-  // Influencer chung, tin dang bai bao) -> van gui kem ANH nhu binh thuong.
-  const toolVideo = tool && tool.youtube ? await getToolLatestVideo(tool.youtube).catch(() => null) : null;
+  let caption = baseCaption;
+  if (affiliate) caption += `\n\nDùng thử tại: ${affiliate}`;
 
-  if (toolVideo) {
-    // Link video dat TRUOC link affiliate de Telegram preview dung video
-    let msg = `${baseCaption}\n\n▶ Xem ${tool.name} hoạt động: ${toolVideo.url}`;
-    if (affiliate) msg += `\n\nDùng thử tại: ${affiliate}`;
-    await sendLinkPreviewToChannel(msg.slice(0, 4000));
+  // Neu tin ve tool co trang chu -> lay video mp4 demo, gui thanh VIDEO THAT
+  // (Telegram phat ngay trong bai, khong mo ra ngoai). Khong lay duoc video ->
+  // gui kem ANH nhu binh thuong.
+  const demoVideo = tool && tool.site ? await getToolDemoVideo(tool.site).catch(() => null) : null;
+
+  if (demoVideo) {
+    await sendVideoToChannel(demoVideo, caption);
     await markSent([src]);
-    return { sent: true, count: 1, title: item.title, affiliate, media: "video", video: toolVideo.url, videoTitle: toolVideo.title };
+    return { sent: true, count: 1, title: item.title, affiliate, media: "video", video: demoVideo };
   }
 
   // Khong co video -> gui kem anh (anh that neu lay duoc, khong thi anh thuong hieu)
-  let caption = baseCaption;
-  if (affiliate) caption += `\n\nDùng thử tại: ${affiliate}`;
   let realImage = await getArticleImage(src);
   if (isBadImage(realImage)) realImage = null;
   const image = realImage || FALLBACK_IMAGES[Math.floor(Date.now() / 1000) % FALLBACK_IMAGES.length];
