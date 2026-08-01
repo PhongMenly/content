@@ -12,7 +12,7 @@ const { chatComplete } = require("../ai");
 
 // Chi goi AI phan loai khi cau noi co dau hieu la mot menh lenh cong viec.
 // Tranh ton token cho moi cau tan gau.
-const COMMAND_HINT = /(duyệt|duyet|đăng|dang|lịch|lich|viết|viet|sửa|sua|bỏ|bo|hủy|huy|chọn|chon|ý tưởng|y tuong|bài|bai)/i;
+const COMMAND_HINT = /(duyệt|duyet|đăng|dang|lịch|lich|viết|viet|sửa|sua|bỏ|bo|hủy|huy|chọn|chon|ý tưởng|y tuong|bài|bai|chủ đề|chu de|triển khai|trien khai|đề xuất|de xuat)/i;
 
 const CLASSIFIER_PROMPT = `Ban la bo phan loai y dinh. Doc cau noi cua nguoi dung va tra ve DUY NHAT mot JSON, khong giai thich, khong markdown.
 
@@ -21,6 +21,7 @@ Cac y dinh hop le:
 - {"action":"approve_one","id":12}    — duyet 1 bai cu the (vd: "duyet bai 12", "bai 12 ok em", "cho dang bai 12")
 - {"action":"list_pending"}           — hoi xem dang co bai nao cho duyet / tinh trang kho bai
 - {"action":"draft","id":12}          — bao viet full bai cho y tuong so 12
+- {"action":"propose_topics"}         — yeu cau de xuat/trien khai chu de bai viet MOI, khong neu so cu the (vd: "cho anh chu de moi", "trien khai bai di em", "viet bai di", "len y tuong di", "de xuat chu de", "sao chua thay viet gi")
 - {"action":"none"}                   — moi thu con lai (tan gau, hoi kien thuc, hoi y kien, cam on...)
 
 Quy tac:

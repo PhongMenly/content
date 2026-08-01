@@ -20,8 +20,11 @@ Nếu anh Phong ra lệnh mà tới bước chat này (tức hệ thống chưa 
 - "sửa: <nội dung>" / "sửa bài <số>: <nội dung>" — sửa nội dung bài đang chờ duyệt
 - "chọn 1,3" hoặc nói tự nhiên ("viết bài 1 và 3", "duyệt cả") — hệ thống viết full bài cho chủ đề theo số thứ tự trong danh sách đề xuất gần nhất
 - "bỏ 2" / "bỏ bài 2" — hệ thống bỏ 1 chủ đề đề xuất
+- /chude — hệ thống đề xuất ngay một lô chủ đề mới có đánh số (dùng khi anh Phong bảo "triển khai bài đi", "cho anh chủ đề mới" mà chưa có danh sách nào)
 - /ytuong <chủ đề> — thêm 1 chủ đề và viết full bài ngay
 - /dexuat — xem lại danh sách chủ đề đang chờ duyệt
+
+CẤM BỊA CÚ PHÁP: chỉ được hướng dẫn đúng các lệnh liệt kê ở trên. Không tự nghĩ ra cú pháp mới ("viết cả", "chọn 4,5,3,2,1,34"...). Nếu anh Phong gõ mà không chạy, bảo anh gõ /chude rồi reply "chọn 1,3".
 - /baocao — báo cáo insight khách hàng, /bonho — bộ nhớ đã học từ khách
 
 Mỗi tuần (thứ 2, 8h sáng) Nhi tự đề xuất 5 chủ đề mới theo 5 pillar + dữ liệu hiệu suất thật, gửi anh Phong duyệt. Bài đến giờ tự đăng Facebook mỗi 5 phút, số liệu tương tác tự đồng bộ mỗi giờ.

@@ -5,7 +5,7 @@ const { callAi } = require("../lib/telegram/chat");
 const { logConversation, generateReport } = require("../lib/telegram/insights");
 const { learn, getMemoryReport } = require("../lib/telegram/memory");
 const { handleReviewReply } = require("../lib/telegram/review-flow");
-const { handleTopicReply, handleTopicNaturalReply, addOwnTopic, listPendingIdeas } = require("../lib/telegram/topic-flow");
+const { handleTopicReply, handleTopicNaturalReply, addOwnTopic, listPendingIdeas, proposeOrListTopics } = require("../lib/telegram/topic-flow");
 
 const router = express.Router();
 
@@ -37,6 +37,16 @@ async function runIntent(text, targetChat) {
       `Y tuong chua viet: ${ideas.length}`,
     ];
     return lines.join("\n");
+  }
+
+  // "trien khai bai di em" / "cho anh chu de moi" -> CODE tu de xuat that va gui
+  // danh sach danh so moi. Truoc day khong co nhanh nay nen cau lenh roi xuong lop
+  // chat, AI tra loi "da day lenh cho he thong" trong khi thuc te khong chay gi.
+  if (intent.action === "propose_topics") {
+    const r = await proposeOrListTopics({ sendMessage: (t) => sendMessage(targetChat, t) });
+    return r.proposed
+      ? `Da de xuat ${r.proposed} chu de moi ben tren. Reply "chon 1,3" de Nhi viet full bai.`
+      : `Dang co ${r.listed} chu de cho san (danh sach ben tren). Reply "chon 1,3" de viet full bai.`;
   }
 
   if (intent.action === "draft" && intent.id) {
@@ -133,7 +143,7 @@ async function handleMessage(message) {
 
   if (text === "/help") {
     const ownerCmds = isOwner
-      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n/hientrang — xem/thêm ghi chú hiện trạng\n/tuhoc — xem những điều Nhi tự học từ anh (21h tự học mỗi tối)\n`
+      ? `/baocao — insights tương tác khách\n/bonho — bộ nhớ AI đã học\n/chude — đề xuất lô chủ đề mới ngay (rồi "chọn 1,3")\n/ytuong <chủ đề> — thêm chủ đề, viết full bài ngay\n/dexuat — xem lại các chủ đề đang chờ duyệt\n/hientrang — xem/thêm ghi chú hiện trạng\n/tuhoc — xem những điều Nhi tự học từ anh (21h tự học mỗi tối)\n`
       : "";
     await sendMessage(targetChat,
       `Nhắn tự nhiên là được. Hoặc dùng:\n\n` +
@@ -191,6 +201,28 @@ async function handleMessage(message) {
       }
     } catch (err) {
       await sendMessage(targetChat, "Loi ghi chu: " + err.message);
+    }
+    return;
+  }
+
+  // /chude — de xuat lo chu de MOI ngay tai cho (khong phai cho cron thu 2 hang tuan).
+  // Neu dang con chu de cho thi liet ke lai va danh so lai cho dung.
+  if (text === "/chude" || text === "/chude moi" || text === "/dexuatmoi") {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    try {
+      const send = (t) => sendMessage(targetChat, t);
+      const r = await proposeOrListTopics({ sendMessage: send });
+      await send(
+        r.proposed
+          ? `Da de xuat ${r.proposed} chu de moi. Reply "chon 1,3" de Nhi viet full bai.`
+          : `Dang co ${r.listed} chu de cho san. Reply "chon 1,3" de viet full bai.`
+      );
+    } catch (err) {
+      console.error("[/chude] Loi:", err.message);
+      await sendMessage(targetChat, "Co loi khi de xuat chu de: " + err.message);
     }
     return;
   }

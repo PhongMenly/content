@@ -152,15 +152,33 @@ async function proposeWeeklyTopics({ sendMessage }) {
   return proposeTopics({ sendMessage, brandKey: DEFAULT_KEY, count: 5 });
 }
 
-// Liet ke lai cac y tuong dang cho duyet (lenh /dexuat)
-async function listPendingIdeas({ sendMessage }) {
-  const ideas = await db.listPosts({ status: "idea" });
+// Liet ke lai cac y tuong dang cho duyet (lenh /dexuat).
+// LOC THEO PERSONA: truoc day khong loc nen y tuong cua Uyen Linh de len map,
+// anh Phong go "chon 1,2,3" lai nhay vao chu de cua persona khac (hoac bao khong tim thay).
+async function listPendingIdeas({ sendMessage, brandKey = DEFAULT_KEY }) {
+  const all = await db.listPosts({ status: "idea" });
+  const ideas = all.filter((p) => (p.brand_key || DEFAULT_KEY) === brandKey);
   if (ideas.length === 0) {
     await sendMessage("Hien khong co y tuong nao dang cho duyet.");
     return 0;
   }
-  await sendIdeaList(ideas, { sendMessage });
+  await sendIdeaList(ideas, { sendMessage }, brandKey);
   return ideas.length;
+}
+
+// Lay danh sach chu de dang cho de chon; neu KHONG con chu de nao thi tu de xuat
+// lo moi ngay tai cho. Dung cho lenh /chude va cho y dinh noi tu nhien
+// ("cho anh chu de moi", "trien khai bai di em") — de khong bao gio roi xuong
+// lop chat va bi AI tra loi nhu the da lam.
+async function proposeOrListTopics({ sendMessage, brandKey = DEFAULT_KEY, count = 5 }) {
+  const all = await db.listPosts({ status: "idea" });
+  const pending = all.filter((p) => (p.brand_key || DEFAULT_KEY) === brandKey);
+  if (pending.length > 0) {
+    await sendIdeaList(pending, { sendMessage }, brandKey);
+    return { proposed: 0, listed: pending.length };
+  }
+  const proposed = await proposeTopics({ sendMessage, brandKey, count });
+  return { proposed, listed: 0 };
 }
 
 // Them 1 chu de tu Phong, viet full ngay khong can duyet y tuong (lenh /ytuong)
@@ -262,6 +280,7 @@ module.exports = {
   proposeTopics,
   proposeWeeklyTopics,
   listPendingIdeas,
+  proposeOrListTopics,
   addOwnTopic,
   handleTopicReply,
   handleTopicNaturalReply,
