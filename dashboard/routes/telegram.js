@@ -237,6 +237,23 @@ async function handleMessage(message) {
     return;
   }
 
+  // /nguon — lay bai THANG tu kenh chinh chu (YouTube + X cua 6 tool, tin AI
+  // influencer). Day la luong chinh cho kenh cong dong theo yeu cau anh Phong.
+  if (text === "/nguon" || text === "/nguonchinhchu") {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    try {
+      const { proposeFromSources } = require("../lib/telegram/direct-source");
+      await proposeFromSources({ sendMessage: (t) => sendMessage(targetChat, t), count: 3 });
+    } catch (err) {
+      console.error("[/nguon] Loi:", err.message);
+      await sendMessage(targetChat, "Co loi khi lay tin tu nguon chinh chu: " + err.message);
+    }
+    return;
+  }
+
   // /baix — tim ngay 1 bai X dung chuyen mon cho kenh cong dong (khong cho cron).
   if (text === "/baix" || text === "/baiX") {
     if (!isOwner) {

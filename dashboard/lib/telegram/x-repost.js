@@ -12,7 +12,7 @@
 const db = require("../../db/client");
 const UYEN_NHI_BRAIN = require("./brain");
 const { completeOnce } = require("./draft");
-const { sendVideoToChannel, sendPhotoToChannel } = require("./channel-broadcast");
+const { sendVideoToChannel, sendPhotoToChannel, sendLinkPreviewToChannel } = require("./channel-broadcast");
 
 const PENDING_KEY = "x_repost_pending";
 const QUEUE_KEY = "x_repost_queue";
@@ -146,7 +146,10 @@ async function handleXApproval(text, { sendMessage }) {
         if (!item) { done.push(`Khong co bai so ${n}`); continue; }
         if (item.video) await sendVideoToChannel(item.video, item.caption);
         else if (item.photo) await sendPhotoToChannel(item.photo, item.caption);
-        else { done.push(`Bai so ${n} khong co video/anh nen bo qua`); continue; }
+        // Bai tu nguon chinh chu (YouTube/tin tuc) khong kem file media ma di kem
+        // LINK — gui dang xem truoc de Telegram tu hien the video/anh cua trang do,
+        // dung format anh Phong thich.
+        else await sendLinkPreviewToChannel(item.caption);
         done.push(`Da dang bai so ${n} len kenh cong dong`);
       }
       await db.setKv(QUEUE_KEY, null);
