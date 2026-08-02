@@ -327,33 +327,56 @@ async function handleMessage(message) {
         });
         return;
       }
-      // 0b) Duyet/sua/huy bai X dang cho duyet (uu tien truoc cac luong khac)
-      const xReply = await handleXApproval(text, { sendMessage: (t) => sendMessage(targetChat, t) });
-      if (xReply) {
-        if (xReply.trim()) await sendMessage(targetChat, xReply);
+      // 0b) PHAN BIET NGU CANH truoc khi cho bat ky luong nao xu ly.
+      // He thong co 3 kho cung dung chu "duyet"/"dang" va cung danh so:
+      // lo tin kenh cong dong, bai cho duyet len fanpage, chu de cho viet.
+      // Neu tu 2 kho tro len dang co viec ma anh Phong khong chi ro dich thi HOI
+      // LAI — truoc day Nhi doan bua nen tra loi lan lon (dang noi ve lo tin cong
+      // dong lai bao "bai so 2 cua Uyen Linh se duoc len lich").
+      const { resolveTarget } = require("../lib/telegram/context");
+      const ctx = await resolveTarget(text);
+      if (ctx.ask) {
+        await sendMessage(targetChat, ctx.ask);
         return;
       }
+      // Anh Phong noi ro dich ("... len cong dong" / "... len page") -> chi cho
+      // dung luong do xu ly, cac luong khac khong duoc gianh.
+      const allow = (pool) => !ctx.target || ctx.target === pool;
 
-      // 1) Lenh chon chu de dang cu phap cung ("chon 1,3" / "bo 2")
-      const topicReply = await handleTopicReply(text, handlers);
-      if (topicReply) {
-        await sendMessage(targetChat, topicReply);
-        return;
+      // Duyet/sua/huy bai cho KENH CONG DONG
+      if (allow("cong_dong")) {
+        const xReply = await handleXApproval(text, { sendMessage: (t) => sendMessage(targetChat, t) });
+        if (xReply) {
+          if (xReply.trim()) await sendMessage(targetChat, xReply);
+          return;
+        }
       }
 
-      // 2) Lenh chon chu de noi TU NHIEN ("duyet ca", "viet bai 1 va 3", "bo so 2").
-      // Chay TRUOC luong duyet bai nhap: khi dang co chu de cho, "duyet ca" nghia
-      // la chon het chu de, khong phai duyet bai nhap (dung loi truoc day cua anh Phong).
-      const topicNatural = await handleTopicNaturalReply(text, handlers);
-      if (topicNatural) {
-        await sendMessage(targetChat, topicNatural);
-        return;
+      // 1) Lenh chon CHU DE dang cu phap cung ("chon 1,3" / "bo 2")
+      if (allow("chu_de")) {
+        const topicReply = await handleTopicReply(text, handlers);
+        if (topicReply) {
+          await sendMessage(targetChat, topicReply);
+          return;
+        }
+
+        // 2) Lenh chon chu de noi TU NHIEN ("duyet ca", "viet bai 1 va 3", "bo so 2").
+        // Chay TRUOC luong duyet bai nhap: khi dang co chu de cho, "duyet ca" nghia
+        // la chon het chu de, khong phai duyet bai nhap (dung loi truoc day cua anh Phong).
+        const topicNatural = await handleTopicNaturalReply(text, handlers);
+        if (topicNatural) {
+          await sendMessage(targetChat, topicNatural);
+          return;
+        }
       }
 
-      const reviewReply = await handleReviewReply(text);
-      if (reviewReply) {
-        await sendMessage(targetChat, reviewReply);
-        return;
+      // 3) Duyet bai len FANPAGE
+      if (allow("fanpage")) {
+        const reviewReply = await handleReviewReply(text);
+        if (reviewReply) {
+          await sendMessage(targetChat, reviewReply);
+          return;
+        }
       }
 
       // Cach noi tu nhien khong khop regex ("duyet het di em", "cho len lich luon")

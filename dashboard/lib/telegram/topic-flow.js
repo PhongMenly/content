@@ -49,7 +49,7 @@ async function saveTopicState(map) {
 
 function formatIdeaList(ideas, brandKey) {
   const label = brandKey && brandKey !== DEFAULT_KEY ? ` (${brandKey})` : "";
-  const lines = [`CHU DE DE XUAT${label} — reply de chon:\n`];
+  const lines = [`[CHU DE CHO VIET${label}] — reply de chon:\n`];
   ideas.forEach((idea, i) => {
     lines.push(`${i + 1}. [${idea.pillar || "?"}] ${idea.title}`);
     if (idea.angle) lines.push(`   Goc nhin: ${idea.angle}`);

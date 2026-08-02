@@ -461,7 +461,7 @@ async function proposeXPosts({ sendMessage, sendVideo, count = 3 }) {
 
   await db.setKv(QUEUE_KEY, picked);
   await db.setKv(PENDING_KEY, null); // dung hang doi, khong dung luong 1 bai
-  await sendMessage(`NHI CHON DUOC ${picked.length} BAI CHO KENH CONG DONG — anh xem roi chon:`);
+  await sendMessage(`[KENH CONG DONG - Telegram] Nhi chon duoc ${picked.length} bai — anh xem roi chon:`);
   for (let i = 0; i < picked.length; i++) {
     const p = picked[i];
     await sendMessage(`===== BAI ${i + 1}/${picked.length} — ${p.score}/10 =====\n(${p.reason})\n\n${p.caption}`);

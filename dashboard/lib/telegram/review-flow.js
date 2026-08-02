@@ -23,7 +23,7 @@ async function saveState(state) {
 
 function formatDraftMessage(post) {
   return (
-    `BAI MOI CHO DUYET (#${post.id})\n\n` +
+    `[FANPAGE UYEN LINH] Bai moi cho duyet (#${post.id})\n\n` +
     `Tieu de: ${post.title || post.slug}\n` +
     `Pillar: ${post.pillar || "chua gan"}\n\n` +
     `${(post.body || "").slice(0, 900)}\n\n` +

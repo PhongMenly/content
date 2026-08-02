@@ -212,7 +212,7 @@ async function proposeFromSources({ sendMessage, count = 3, days = 14, includeX 
   await db.setKv("x_repost_pending", null);
 
   const label = { youtube: "YouTube chinh chu", x: "X chinh chu", influencer: "Tin AI influencer" };
-  await sendMessage(`NHI LAY ${queue.length} BAI TU NGUON CHINH CHU — anh xem roi chon:`);
+  await sendMessage(`[KENH CONG DONG - Telegram] Nhi lay ${queue.length} bai tu nguon chinh chu — anh xem roi chon:`);
   for (let i = 0; i < queue.length; i++) {
     await sendMessage(`===== BAI ${i + 1}/${queue.length} — ${label[queue[i].kind]} (${queue[i].source}) =====\n\n${queue[i].caption}`);
   }
