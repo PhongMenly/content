@@ -91,4 +91,50 @@ Quy tac:
   }
 }
 
-module.exports = { classifyIntent, classifyTopicIntent };
+// Hieu y anh Phong khi dang co MOT LO BAI danh so cho dang len kenh cong dong.
+// Anh Phong noi tu nhien ("duyet 2/3", "so 2", "lay cai dau", "het di em") chu
+// khong go dung chuoi "dang 1,3" — truoc day khong khop la roi xuong lop chat
+// va Nhi bia ra cu phap khong ton tai.
+async function classifyQueueIntent(text, numbers) {
+  const trimmed = (text || "").trim();
+  if (!trimmed || trimmed.length > 200) return { action: "none" };
+
+  const prompt = `Anh Phong vua duoc gui ${numbers.length} bai viet danh so ${numbers.join(", ")} de chon dang len kenh cong dong.
+Doc cau tra loi cua anh va tra ve DUY NHAT mot JSON, khong giai thich, khong markdown.
+
+Y dinh hop le:
+- {"action":"publish","numbers":[2,3]}  — dang cac bai co so do (vd: "duyet 2,3", "duyet 2/3", "so 2", "lay bai 2 va 3", "cai dau tien", "bai cuoi")
+- {"action":"publish_all"}              — dang het (vd: "dang het", "duyet ca", "lay tat ca", "ok het")
+- {"action":"reject"}                   — khong dang bai nao (vd: "bo", "huy", "khong dang", "bo het di")
+- {"action":"resend"}                   — muon xem lai cac bai (vd: "gui lai", "cho xem lai", "xem lai di")
+- {"action":"ambiguous","numbers":[2,3]} — co ve muon dang nhung KHONG chac la nhung so nao
+- {"action":"none"}                     — khong lien quan den lo bai nay (hoi chuyen khac, tan gau)
+
+Quy tac:
+- Chi lay so nam trong ${numbers.join(", ")}. Bo so ngoai danh sach.
+- "2/3" thuong nghia la bai so 2 VA bai so 3, khong phai "2 trong 3".
+- "cai dau"/"bai dau" = ${numbers[0]}; "cai cuoi"/"bai cuoi" = ${numbers[numbers.length - 1]}.
+- Cau chi HOI ("bai 2 noi gi?", "may bai?") -> "none".
+- Neu hieu duoc ro rang thi tra publish. Chi dung "ambiguous" khi that su khong doan duoc so nao.`;
+
+  try {
+    const raw = await chatComplete({
+      system: prompt,
+      messages: [{ role: "user", content: trimmed }],
+      maxTokens: 80,
+      temperature: 0,
+    });
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return { action: "none" };
+    const p = JSON.parse(m[0]);
+    if (!p || typeof p.action !== "string") return { action: "none" };
+    if (Array.isArray(p.numbers)) {
+      p.numbers = p.numbers.map(Number).filter((n) => numbers.includes(n));
+    }
+    return p;
+  } catch (e) {
+    return { action: "none" };
+  }
+}
+
+module.exports = { classifyIntent, classifyTopicIntent, classifyQueueIntent };

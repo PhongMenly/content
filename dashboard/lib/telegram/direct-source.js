@@ -216,7 +216,7 @@ async function proposeFromSources({ sendMessage, count = 3, days = 14, includeX 
   for (let i = 0; i < queue.length; i++) {
     await sendMessage(`===== BAI ${i + 1}/${queue.length} — ${label[queue[i].kind]} (${queue[i].source}) =====\n\n${queue[i].caption}`);
   }
-  await sendMessage('Reply "dang 1" hoac "dang 1,3" de dang len kenh. "bo" neu khong dang bai nao.');
+  await sendMessage(`Anh cu noi tu nhien nhe: "dang bai 2", "duyet 2/3", "so 2", "lay ca 3", "bo het" — Nhi hieu het.`);
   return { proposed: queue.length };
 }
 

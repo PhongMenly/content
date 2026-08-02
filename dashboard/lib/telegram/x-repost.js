@@ -159,11 +159,54 @@ async function handleXApproval(text, { sendMessage }) {
       await db.setKv(QUEUE_KEY, null);
       return "Da bo ca lo bai X, khong dang bai nao.";
     }
+    // Khong khop cu phap cung -> nho AI HIEU Y trong dung ngu canh lo bai nay.
+    // Anh Phong noi tu nhien ("duyet 2/3", "so 2", "cai dau") van phai chay dung.
+    if (!RESEND_RE.test(t)) {
+      const { classifyQueueIntent } = require("./intent");
+      const nums = queue.map((_, i) => i + 1);
+      const intent = await classifyQueueIntent(t, nums);
+
+      const publish = async (list) => {
+        const done = [];
+        for (const n of list) {
+          const item = queue[n - 1];
+          if (!item) { done.push(`Khong co bai so ${n}`); continue; }
+          if (item.video) await sendVideoToChannel(item.video, item.caption);
+          else if (item.photo) await sendPhotoToChannel(item.photo, item.caption);
+          else await sendLinkPreviewToChannel(item.caption);
+          done.push(`Da dang bai so ${n} len kenh cong dong`);
+        }
+        await db.setKv(QUEUE_KEY, null);
+        return done.join("\n");
+      };
+
+      if (intent.action === "publish" && intent.numbers && intent.numbers.length) {
+        return publish(intent.numbers);
+      }
+      if (intent.action === "publish_all") return publish(nums);
+      if (intent.action === "reject") {
+        await db.setKv(QUEUE_KEY, null);
+        return "Da bo ca lo bai, khong dang bai nao.";
+      }
+      if (intent.action === "resend") {
+        for (let i = 0; i < queue.length; i++) {
+          await sendMessage(`===== BAI ${i + 1}/${queue.length} =====\n\n${queue[i].caption}`);
+        }
+        return " ";
+      }
+      // That su khong doan duoc -> HOI LAI ngan gon, tuyet doi khong dang bua.
+      if (intent.action === "ambiguous") {
+        const guess = (intent.numbers || []).join(", ");
+        await sendMessage(guess ? `Anh muon dang bai so ${guess} phai khong a?` : `Anh muon dang bai so may a? (dang co ${nums.join(", ")})`);
+        return " ";
+      }
+    }
+
     if (RESEND_RE.test(t)) {
       for (let i = 0; i < queue.length; i++) {
         await sendMessage(`===== BAI ${i + 1}/${queue.length} — ${queue[i].score}/10 =====\n\n${queue[i].caption}`);
       }
-      await sendMessage('Reply "dang 1" hoac "dang 1,3" de dang bai anh chon.');
+      await sendMessage(`Anh cu noi tu nhien nhe: "dang bai 2", "duyet 2/3", "so 2", "lay ca 3", "bo het" — Nhi hieu het.`);
       return " ";
     }
     return null; // cau khac -> nha cho luong khac xu ly
@@ -424,7 +467,7 @@ async function proposeXPosts({ sendMessage, sendVideo, count = 3 }) {
     await sendMessage(`===== BAI ${i + 1}/${picked.length} — ${p.score}/10 =====\n(${p.reason})\n\n${p.caption}`);
     if (p.video) await sendVideo(p.video, `Video bai ${i + 1} (xem thu)`);
   }
-  await sendMessage(`Reply "dang 1" hoac "dang 1,3" de dang bai anh chon len kenh.\nReply "bo" neu khong dang bai nao.`);
+  await sendMessage(`Anh cu noi tu nhien nhe: "dang bai 2", "duyet 2/3", "so 2", "lay ca 3", "bo het" — Nhi hieu het.`);
   return { proposed: picked.length };
 }
 
