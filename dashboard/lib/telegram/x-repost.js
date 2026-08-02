@@ -176,20 +176,75 @@ async function pickSendableMp4(variants) {
   return variants.length ? variants[variants.length - 1].url : null;
 }
 
+// ===== BO LOC CHAT LUONG NOI DUNG KENH CONG DONG =====
+// Kenh la kenh CHUYEN MON ve AI ung dung trong kinh doanh, khong phai kenh giai tri.
+// Truoc day khong kiem tra lai sau khi Apify tra ve -> lot ca video "hai AI" va bai
+// khong lien quan gi den cong cu AI (vd extension fact-check chinh tri).
+
+// Bai PHAI nhac den it nhat 1 trong so nay moi duoc xet.
+const REQUIRED_TERMS = [
+  "higgsfield", "heygen", "elevenlabs", "topview", "jogg", "base44",
+  "ai influencer", "virtual influencer", "ai avatar", "ai ugc", "ugc ad",
+  "ai video", "ai voice", "voice clone", "text to video", "image to video",
+  "ai agent", "ai automation", "ai workflow", "vibe coding", "ai marketing", "ai ads",
+];
+
+// Tin hieu giai tri/hai huoc/drama -> loai thang, du co viral toi dau.
+const REJECT_TERMS = [
+  "funny", "hilarious", "lol", "lmao", "meme", "joke", "prank", "comedy", "skit",
+  "brainrot", "cursed", "rizz", "troll", "cringe", "parody", "satire", "roast",
+  "gone wrong", "reaction", "tier list", "ranking every", "drama", "beef",
+];
+
+function textOf(t) {
+  return String((t && t.text) || "").toLowerCase();
+}
+
+function passesKeywordGate(t) {
+  const s = textOf(t);
+  if (!s) return false;
+  if (REJECT_TERMS.some((w) => s.includes(w))) return false;
+  return REQUIRED_TERMS.some((w) => s.includes(w));
+}
+
+// Cua ai cuoi cung: AI doc bai va cham diem co hop kenh chuyen mon khong.
+// Bat duoc cac bai "dung tu khoa nhung noi dung nham" ma regex khong the loc.
+async function scoreRelevance(tweetText) {
+  const { chatComplete } = require("../ai");
+  const system =
+    `Ban la bien tap vien cua mot kenh cong dong ve AI UNG DUNG TRONG KINH DOANH ` +
+    `(lam noi dung, ban hang, tu dong hoa, affiliate). Doc bai X duoi day va cham diem 0-10:\n` +
+    `- 8-10: gioi thieu cong cu AI cu the, quy trinh lam duoc viec, ket qua kinh doanh do duoc, tin tuc san pham AI quan trong.\n` +
+    `- 4-7: co lien quan AI nhung chung chung, khong hoc duoc gi cu the.\n` +
+    `- 0-3: giai tri, hai huoc, meme, drama, khoe do dep don thuan, chinh tri, hoac khong lien quan cong cu AI.\n` +
+    `Chi tra ve DUY NHAT JSON: {"score": <so>, "reason": "<mot cau ngan tieng Viet khong dau>"}`;
+  try {
+    const raw = await chatComplete({ system, messages: [{ role: "user", content: tweetText.slice(0, 1200) }], maxTokens: 80, temperature: 0 });
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return { score: 0, reason: "khong cham diem duoc" };
+    const p = JSON.parse(m[0]);
+    return { score: Number(p.score) || 0, reason: String(p.reason || "") };
+  } catch (e) {
+    return { score: 0, reason: "loi cham diem: " + e.message };
+  }
+}
+
+const MIN_RELEVANCE_SCORE = 7;
+
 // Tim bai X viral ve AI co video (14 ngay gan day, du luot thich).
 async function searchViralAiVideos() {
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("Thieu APIFY_TOKEN");
   const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  // BAM DUNG CHU DE anh Phong chot: 6 tool + AI Influencer/nguoi mau AI quoc te.
-  // KHONG dung "AI video" chung chung (keo ve tin lac de).
+  // BAM DUNG 6 tool anh Phong lam affiliate + AI ung dung trong kinh doanh.
+  // DA BO "AI model"/"AI actress"/"AI film" — qua long, keo ve video AI giai tri.
   const input = {
     twitterContent:
-      '(Higgsfield OR HeyGen OR ElevenLabs OR Topview OR "Jogg AI" OR Base44 OR "AI influencer" OR "virtual influencer" OR "virtual model" OR "AI model" OR "AI actress" OR "AI filmmaking" OR "AI film")',
+      '(Higgsfield OR HeyGen OR ElevenLabs OR Topview OR "Jogg AI" OR Base44 OR "AI influencer" OR "virtual influencer" OR "AI avatar" OR "AI UGC" OR "AI agent" OR "vibe coding")',
     queryType: "Videos",
     lang: "en",
-    "min_faves": 500,
-    maxItems: 25,
+    "min_faves": 800,
+    maxItems: 40,
     since,
   };
   const r = await fetch(
@@ -207,15 +262,32 @@ async function proposeXPost({ sendMessage, sendVideo }) {
   const sentSet = new Set(sent);
 
   const tweets = await searchViralAiVideos();
-  const fresh = tweets
-    .filter((t) => !sentSet.has(t.id))
+  // Cua 1 (regex, mien phi): phai nhac cong cu/chu de AI ung dung, khong dinh tu
+  // khoa giai tri. Loc truoc de khong ton token cham diem cho bai ro rang lac de.
+  const candidates = tweets
+    .filter((t) => !sentSet.has(t.id) && passesKeywordGate(t))
     .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
-  if (!fresh.length) {
-    if (sendMessage) await sendMessage("Hom nay chua tim thay bai X moi ve AI co video de de xuat.");
+  if (!candidates.length) {
+    if (sendMessage) await sendMessage("Hom nay khong co bai X nao dung chu de AI ung dung de de xuat.");
     return { proposed: 0 };
   }
 
-  const t = fresh[0];
+  // Cua 2 (AI cham diem): duyet tu bai nhieu tim nhat xuong, lay bai dau tien dat
+  // chuan chuyen mon. Bai truot van danh dau da xet de khong lap lai ngay mai.
+  let t = null;
+  let scored = null;
+  const rejected = [];
+  for (const cand of candidates.slice(0, 8)) {
+    const s = await scoreRelevance(cand.text || "");
+    if (s.score >= MIN_RELEVANCE_SCORE) { t = cand; scored = s; break; }
+    rejected.push(cand.id);
+  }
+  if (!t) {
+    await db.setKv(SENT_IDS_KEY, [...sent, ...rejected].slice(-300));
+    if (sendMessage) await sendMessage(`Hom nay co ${candidates.length} bai X viral nhung khong bai nao du chuan chuyen mon (toan giai tri/chung chung) — Nhi khong de xuat.`);
+    return { proposed: 0, rejected: rejected.length };
+  }
+  sent.push(...rejected);
   const videoUrl = await pickSendableMp4(videoVariants(t));
   const handle = (t.author && (t.author.userName || t.author.screenName)) || "";
   const tweetUrl = t.url || t.twitterUrl || `https://x.com/${handle}/status/${t.id}`;
@@ -226,10 +298,13 @@ async function proposeXPost({ sendMessage, sendVideo }) {
   // Danh dau da xet (du duyet hay khong cung khong de xuat lai bai nay)
   await db.setKv(SENT_IDS_KEY, [...sent, t.id].slice(-300));
 
-  await sendMessage("NHI TIM DUOC BAI X HOT VE AI — duyet dang len kenh cong dong:\n\n" + caption);
+  await sendMessage(
+    `NHI TIM DUOC BAI X HOT VE AI — duyet dang len kenh cong dong:\n` +
+    `(Diem phu hop chuyen mon: ${scored.score}/10 — ${scored.reason})\n\n` + caption
+  );
   if (videoUrl) await sendVideo(videoUrl, "Video se dang kem (xem thu)");
   await sendMessage('Reply "dang" de dang len kenh, "sua: ..." de sua loi, "bo" de bo.');
-  return { proposed: 1, id: t.id, likes: t.likeCount };
+  return { proposed: 1, id: t.id, likes: t.likeCount, score: scored.score };
 }
 
-module.exports = { hasXLink, handleXLink, handleXApproval, proposeXPost, searchViralAiVideos };
+module.exports = { hasXLink, handleXLink, handleXApproval, proposeXPost, searchViralAiVideos, passesKeywordGate, scoreRelevance };
