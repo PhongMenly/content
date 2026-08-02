@@ -237,13 +237,16 @@ router.get("/self-learn", checkCronAuth, async (req, res) => {
   }
 });
 
-// May tu lung bai X (Twitter) hot ve AI co video -> Nhi viet nhap -> gui anh Phong duyet
+// De xuat tin cho KENH CONG DONG: lay THANG tu kenh chinh chu (YouTube + X cua
+// 6 tool, tin ve 4 AI influencer) -> gui 3 bai cho anh Phong duyet.
+// Truoc day route nay goi proposeXPost (search tu khoa chung tren X) — cach do
+// cho ra bai cua nguoi la va video hai, anh Phong da chot bo.
 router.get("/x-discover", checkCronAuth, async (req, res) => {
   try {
-    const { proposeXPost } = require("../lib/telegram/x-repost");
-    const result = await proposeXPost({
+    const { proposeFromSources } = require("../lib/telegram/direct-source");
+    const result = await proposeFromSources({
       sendMessage: (t) => sendMessage(OWNER_CHAT_ID, t),
-      sendVideo: (u, c) => sendVideo(OWNER_CHAT_ID, u, c),
+      count: Number(req.query.count) || 3,
     });
     res.json({ ok: true, ...result });
   } catch (err) {
