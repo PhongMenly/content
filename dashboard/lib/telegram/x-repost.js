@@ -104,8 +104,15 @@ const PENDING_TTL_MS = 6 * 3600 * 1000;
 // "duyet ca", "duyet het", "duyet 12" la lenh cua luong DUYET BAI NHAP, khong phai
 // bai X. Truoc day regex cua X bat moi cau bat dau bang "duyet" nen bai X treo
 // nuot sach lenh duyet bai -> anh Phong go "duyet ca" ma bai khong he len lich.
-const SCOPE_HINT = /(\bcả\b|\bca\b|\bhết\b|\bhet\b|\btất\b|\btat\b|\btoàn\b|\btoan\b|\d)/i;
-const X_HINT = /\b(x|twitter|tweet)\b/i;
+// KHONG dung \b voi chu tieng Viet co dau: \b cua JS chi hieu ky tu ASCII, nen
+// /\bcả\b/ KHONG khop "duyet ca" (sau chu "a" co dau khong co ranh gioi tu ASCII).
+// Dung ranh gioi khoang trang/dau chuoi tuong minh cho chac.
+const SCOPE_HINT = /(^|\s)(cả|ca|hết|het|tất|tat|toàn|toan|all)(\s|$)|\d/i;
+const X_HINT = /(^|\s)(x|twitter|tweet)(\s|$)/i;
+
+// Yeu cau XEM LAI ban nhap (khong phai lenh dang): "gui lai", "cho xem lai",
+// "xem lai di", "gui lai toi xem chu sao lai duyet".
+const RESEND_RE = /^(gửi|gui|cho|xem|coi|show)\b[\s\S]*\b(lại|lai|xem|coi|thử|thu)\b/i;
 
 function isXCommand(t, verbRegex) {
   if (!verbRegex.test(t)) return false;
@@ -130,13 +137,31 @@ async function handleXApproval(text, { sendMessage }) {
     await sendMessage("Da sua loi. Ban moi:\n\n" + caption + '\n\nReply "dang" de dang, "bo" de huy.');
     return " ";
   }
-  if (isXCommand(t, /^(đăng|dang|duyệt|duyet|ok|oke|gửi|gui)\b/i)) {
+  // "Gui lai", "cho xem lai", "gui lai toi xem" = anh Phong muon XEM LAI ban nhap,
+  // TUYET DOI khong phai lenh dang. Truoc day "gui" nam trong nhom dong tu dang nen
+  // "Gui lai" bi hieu la "dang di" -> bai rac len thang kenh cong dong khong qua duyet.
+  if (RESEND_RE.test(t)) {
+    await sendMessage("Ban nhap dang cho duyet:\n\n" + pending.caption);
+    await sendMessage('Reply "dang" de dang len kenh, "sua: ..." de sua loi, "bo" de bo.');
+    return " ";
+  }
+  // Chi nhan lenh dang khi ro rang. Da BO "gui/gửi" khoi nhom nay vi qua da nghia.
+  if (isXCommand(t, /^(đăng|dang|duyệt|duyet|ok|oke|oki)(\s|$|[,.!?])/i)) {
     if (pending.video) await sendVideoToChannel(pending.video, pending.caption);
     else if (pending.photo) await sendPhotoToChannel(pending.photo, pending.caption);
     await db.setKv(PENDING_KEY, null);
     return "Da dang bai X len kenh cong dong.";
   }
-  if (isXCommand(t, /^(bỏ|bo|huỷ|huy|khong|không)\b/i)) {
+  // Doi bai khac: "chon bai khac", "tim bai khac", "chu de khac" -> bo bai dang treo,
+  // KHONG dang. Truoc day cau nay roi xuong lop khac va bi hieu nham thanh de xuat
+  // chu de bai viet cho persona, sai hoan toan ngu canh.
+  if (/(khác|khac)\b/i.test(t) && /(bài|bai|chủ đề|chu de|cái|cai|video|tin)/i.test(t)) {
+    await db.setKv(PENDING_KEY, null);
+    return "Da bo bai X nay. Nhi se tim bai khac dung chuyen mon hon o luot quet sau (hoac go /baix de tim ngay).";
+  }
+  // Dung (\s|$|dau cau) thay cho \b: \b khong nhan dien duoc chu ket thuc bang
+  // nguyen am co dau ("bỏ", "huỷ") nen truoc day lenh bo bai X khong an.
+  if (isXCommand(t, /^(bỏ|bo|huỷ|huy|khong|không)(\s|$|[,.!?])/i)) {
     await db.setKv(PENDING_KEY, null);
     return "Da huy bai X, khong dang.";
   }
@@ -191,6 +216,7 @@ const REQUIRED_TERMS = [
 
 // Tin hieu giai tri/hai huoc/drama -> loai thang, du co viral toi dau.
 const REJECT_TERMS = [
+  "cartoon", "animation test", "animated short", "disney", "pixar", "anime edit",
   "funny", "hilarious", "lol", "lmao", "meme", "joke", "prank", "comedy", "skit",
   "brainrot", "cursed", "rizz", "troll", "cringe", "parody", "satire", "roast",
   "gone wrong", "reaction", "tier list", "ranking every", "drama", "beef",
@@ -212,11 +238,15 @@ function passesKeywordGate(t) {
 async function scoreRelevance(tweetText) {
   const { chatComplete } = require("../ai");
   const system =
-    `Ban la bien tap vien cua mot kenh cong dong ve AI UNG DUNG TRONG KINH DOANH ` +
-    `(lam noi dung, ban hang, tu dong hoa, affiliate). Doc bai X duoi day va cham diem 0-10:\n` +
-    `- 8-10: gioi thieu cong cu AI cu the, quy trinh lam duoc viec, ket qua kinh doanh do duoc, tin tuc san pham AI quan trong.\n` +
-    `- 4-7: co lien quan AI nhung chung chung, khong hoc duoc gi cu the.\n` +
-    `- 0-3: giai tri, hai huoc, meme, drama, khoe do dep don thuan, chinh tri, hoac khong lien quan cong cu AI.\n` +
+    `Ban la bien tap vien KHO TINH cua kenh cong dong "KOL AI GO GLOBAL" — kenh CHUYEN MON ` +
+    `ve AI ung dung trong KINH DOANH (lam noi dung, ban hang, tu dong hoa, affiliate). ` +
+    `Doc gia la nguoi lam MMO/affiliate/chu shop, ho vao day de HOC LAM RA TIEN, khong phai de giai tri.\n\n` +
+    `Cham diem bai X duoi day tu 0-10:\n` +
+    `- 9-10: co CONG CU CU THE + quy trinh/cach lam ro rang, hoac so lieu kinh doanh that (doanh thu, ty le chuyen doi, thoi gian tiet kiem), hoac tin ra mat tinh nang quan trong dung duoc ngay.\n` +
+    `- 6-8: dung chu de nhung nong, doc xong chua lam theo duoc gi cu the.\n` +
+    `- 0-5: LOAI. Gom: video hoat hinh/animation/nhan vat che, demo khoe ky xao don thuan, meme, hai huoc, drama, khoe anh dep, tin chinh tri/xa hoi, bai chi de gay sock hoac cau view.\n\n` +
+    `QUY TAC: bai chi "trong dep/an tuong" ma khong day duoc gi thi TOI DA 5 diem, du viral toi dau. ` +
+    `Neu khong chac chan, cham diem THAP.\n` +
     `Chi tra ve DUY NHAT JSON: {"score": <so>, "reason": "<mot cau ngan tieng Viet khong dau>"}`;
   try {
     const raw = await chatComplete({ system, messages: [{ role: "user", content: tweetText.slice(0, 1200) }], maxTokens: 80, temperature: 0 });
@@ -229,7 +259,7 @@ async function scoreRelevance(tweetText) {
   }
 }
 
-const MIN_RELEVANCE_SCORE = 7;
+const MIN_RELEVANCE_SCORE = 9;
 
 // Tim bai X viral ve AI co video (14 ngay gan day, du luot thich).
 async function searchViralAiVideos() {

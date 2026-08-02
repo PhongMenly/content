@@ -237,6 +237,25 @@ async function handleMessage(message) {
     return;
   }
 
+  // /baix — tim ngay 1 bai X dung chuyen mon cho kenh cong dong (khong cho cron).
+  if (text === "/baix" || text === "/baiX") {
+    if (!isOwner) {
+      await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
+      return;
+    }
+    try {
+      const { proposeXPost } = require("../lib/telegram/x-repost");
+      await proposeXPost({
+        sendMessage: (t) => sendMessage(targetChat, t),
+        sendVideo: (u, c) => sendVideo(targetChat, u, c),
+      });
+    } catch (err) {
+      console.error("[/baix] Loi:", err.message);
+      await sendMessage(targetChat, "Co loi khi tim bai X: " + err.message);
+    }
+    return;
+  }
+
   if (text === "/dexuat") {
     if (!isOwner) {
       await sendMessage(targetChat, "Lệnh này chỉ dành cho anh Phong thôi nha.");
