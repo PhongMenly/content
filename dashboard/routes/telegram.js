@@ -244,10 +244,11 @@ async function handleMessage(message) {
       return;
     }
     try {
-      const { proposeXPost } = require("../lib/telegram/x-repost");
-      await proposeXPost({
+      const { proposeXPosts } = require("../lib/telegram/x-repost");
+      await proposeXPosts({
         sendMessage: (t) => sendMessage(targetChat, t),
         sendVideo: (u, c) => sendVideo(targetChat, u, c),
+        count: 3,
       });
     } catch (err) {
       console.error("[/baix] Loi:", err.message);

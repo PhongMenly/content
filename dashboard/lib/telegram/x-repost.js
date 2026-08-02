@@ -15,6 +15,7 @@ const { completeOnce } = require("./draft");
 const { sendVideoToChannel, sendPhotoToChannel } = require("./channel-broadcast");
 
 const PENDING_KEY = "x_repost_pending";
+const QUEUE_KEY = "x_repost_queue";
 const MAX_TG_VIDEO = 20 * 1024 * 1024; // Telegram gui video qua URL gioi han ~20MB
 
 function parseTweetId(url) {
@@ -122,13 +123,48 @@ function isXCommand(t, verbRegex) {
 
 async function handleXApproval(text, { sendMessage }) {
   const pending = await db.getKv(PENDING_KEY);
-  if (!pending) return null;
-  const at = Number(pending.at);
-  if (!Number.isFinite(at) || Date.now() - at > PENDING_TTL_MS) {
-    await db.setKv(PENDING_KEY, null);
-    return null;
+  const queue = (await db.getKv(QUEUE_KEY)) || [];
+  const hasQueue = Array.isArray(queue) && queue.length > 0;
+  if (!pending && !hasQueue) return null;
+  if (pending) {
+    const at = Number(pending.at);
+    if (!Number.isFinite(at) || Date.now() - at > PENDING_TTL_MS) {
+      await db.setKv(PENDING_KEY, null);
+      if (!hasQueue) return null;
+    }
   }
   const t = (text || "").trim();
+
+  // Hang doi nhieu bai — xu ly truoc vi chi co o luong nay.
+  if (hasQueue) {
+    const pick = t.match(/^(?:đăng|dang)\s+([\d,\s]+)$/i);
+    if (pick) {
+      const nums = pick[1].split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+      const done = [];
+      for (const n of nums) {
+        const item = queue[n - 1];
+        if (!item) { done.push(`Khong co bai so ${n}`); continue; }
+        if (item.video) await sendVideoToChannel(item.video, item.caption);
+        else if (item.photo) await sendPhotoToChannel(item.photo, item.caption);
+        else { done.push(`Bai so ${n} khong co video/anh nen bo qua`); continue; }
+        done.push(`Da dang bai so ${n} len kenh cong dong`);
+      }
+      await db.setKv(QUEUE_KEY, null);
+      return done.join("\n");
+    }
+    if (isXCommand(t, /^(bỏ|bo|huỷ|huy|khong|không)(\s|$|[,.!?])/i)) {
+      await db.setKv(QUEUE_KEY, null);
+      return "Da bo ca lo bai X, khong dang bai nao.";
+    }
+    if (RESEND_RE.test(t)) {
+      for (let i = 0; i < queue.length; i++) {
+        await sendMessage(`===== BAI ${i + 1}/${queue.length} — ${queue[i].score}/10 =====\n\n${queue[i].caption}`);
+      }
+      await sendMessage('Reply "dang 1" hoac "dang 1,3" de dang bai anh chon.');
+      return " ";
+    }
+    return null; // cau khac -> nha cho luong khac xu ly
+  }
 
   if (/^s(ử|u)a:\s*/i.test(t)) {
     const body = t.replace(/^s(ử|u)a:\s*/i, "").trim();
@@ -337,4 +373,56 @@ async function proposeXPost({ sendMessage, sendVideo }) {
   return { proposed: 1, id: t.id, likes: t.likeCount, score: scored.score };
 }
 
-module.exports = { hasXLink, handleXLink, handleXApproval, proposeXPost, searchViralAiVideos, passesKeywordGate, scoreRelevance };
+// De xuat NHIEU bai mot luot de anh Phong xem roi chon ("dang 1,3").
+// Khac proposeXPost (1 bai/lan) — dung khi muon xem vai lua chon cung luc.
+async function proposeXPosts({ sendMessage, sendVideo, count = 3 }) {
+  const sent = (await db.getKv(SENT_IDS_KEY)) || [];
+  const sentSet = new Set(sent);
+
+  const tweets = await searchViralAiVideos();
+  const candidates = tweets
+    .filter((t) => !sentSet.has(t.id) && passesKeywordGate(t))
+    .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+
+  const picked = [];
+  const seen = [];
+  for (const cand of candidates.slice(0, 14)) {
+    if (picked.length >= count) break;
+    const s = await scoreRelevance(cand.text || "");
+    seen.push(cand.id);
+    if (s.score < MIN_RELEVANCE_SCORE) continue;
+    const handle = (cand.author && (cand.author.userName || cand.author.screenName)) || "";
+    const body = await writeCaption({ text: cand.text || "", handle });
+    picked.push({
+      id: cand.id,
+      handle,
+      tweetUrl: cand.url || cand.twitterUrl || `https://x.com/${handle}/status/${cand.id}`,
+      video: await pickSendableMp4(videoVariants(cand)),
+      caption: `${body}\n\n(Nguon: X @${handle} — ${cand.likeCount || 0} luot thich)\n${cand.url || `https://x.com/${handle}/status/${cand.id}`}`,
+      score: s.score,
+      reason: s.reason,
+      likes: cand.likeCount || 0,
+    });
+  }
+
+  // Bai da xet (dat hay khong) deu danh dau de khong de xuat lai ngay mai.
+  await db.setKv(SENT_IDS_KEY, [...sent, ...seen].slice(-300));
+
+  if (!picked.length) {
+    await sendMessage(`Da quet ${candidates.length} bai X viral nhung khong bai nao dat chuan chuyen mon (>= ${MIN_RELEVANCE_SCORE}/10). Nhi khong de xuat bai vot.`);
+    return { proposed: 0 };
+  }
+
+  await db.setKv(QUEUE_KEY, picked);
+  await db.setKv(PENDING_KEY, null); // dung hang doi, khong dung luong 1 bai
+  await sendMessage(`NHI CHON DUOC ${picked.length} BAI CHO KENH CONG DONG — anh xem roi chon:`);
+  for (let i = 0; i < picked.length; i++) {
+    const p = picked[i];
+    await sendMessage(`===== BAI ${i + 1}/${picked.length} — ${p.score}/10 =====\n(${p.reason})\n\n${p.caption}`);
+    if (p.video) await sendVideo(p.video, `Video bai ${i + 1} (xem thu)`);
+  }
+  await sendMessage(`Reply "dang 1" hoac "dang 1,3" de dang bai anh chon len kenh.\nReply "bo" neu khong dang bai nao.`);
+  return { proposed: picked.length };
+}
+
+module.exports = { hasXLink, handleXLink, handleXApproval, proposeXPost, proposeXPosts, searchViralAiVideos, passesKeywordGate, scoreRelevance };
