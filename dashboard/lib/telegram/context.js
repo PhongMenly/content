@@ -69,15 +69,37 @@ function explicitTarget(text) {
  * Quyet dinh co can hoi lai khong.
  * Tra ve { ask: <chuoi cau hoi> } neu nhap nhang, hoac { target: <kho>|null }.
  */
+const LAST_TARGET_KEY = "last_target";
+const LAST_TARGET_TTL_MS = 15 * 60 * 1000;
+
+async function rememberTarget(target) {
+  if (target) await db.setKv(LAST_TARGET_KEY, { target, at: Date.now() });
+}
+
+async function recallTarget() {
+  const v = await db.getKv(LAST_TARGET_KEY);
+  if (!v || !v.target) return null;
+  if (Date.now() - Number(v.at || 0) > LAST_TARGET_TTL_MS) return null;
+  return v.target;
+}
+
 async function resolveTarget(text) {
   const target = explicitTarget(text);
-  if (target) return { target };
+  if (target) {
+    await rememberTarget(target);
+    return { target };
+  }
 
   if (!COMMAND_LIKE.test(String(text || ""))) return { target: null };
 
   const active = await getActiveContexts();
   const keys = Object.keys(active);
   if (keys.length <= 1) return { target: keys[0] || null };
+
+  // Anh Phong vua noi ro dich o cau truoc ("chon 1,2,3 dang page" roi "chon 1,2,3")
+  // -> giu nguyen dich do, khong hoi lai cai anh vua tra loi.
+  const recent = await recallTarget();
+  if (recent && active[recent]) return { target: recent };
 
   // Tu 2 kho tro len dang co viec ma cau noi khong chi ro -> HOI, khong doan.
   const lines = keys.map((k, i) => `${i + 1}. ${POOLS[k]} (${active[k]} bai)`);
@@ -89,4 +111,4 @@ async function resolveTarget(text) {
   };
 }
 
-module.exports = { POOLS, getActiveContexts, explicitTarget, resolveTarget, COMMAND_LIKE };
+module.exports = { POOLS, getActiveContexts, explicitTarget, resolveTarget, rememberTarget, recallTarget, COMMAND_LIKE };

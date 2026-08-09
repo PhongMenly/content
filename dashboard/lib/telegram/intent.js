@@ -137,4 +137,52 @@ Quy tac:
   }
 }
 
-module.exports = { classifyIntent, classifyTopicIntent, classifyQueueIntent };
+// Hieu y anh Phong khi dang co BAI CHO DUYET LEN FANPAGE.
+// Truoc day luong nay chi hieu dung "duyet <so>" — anh Phong go "chon 1,2,3 dang
+// page" la truot, roi xuong lop chat va Nhi lai bat anh go dung cu phap.
+// Kho o cho anh Phong danh so theo THU TU trong danh sach (1,2,3) con he thong
+// luu theo ID (#60, #51) — phai hieu ca hai kieu.
+async function classifyReviewIntent(text, pending) {
+  const trimmed = (text || "").trim();
+  if (!trimmed || trimmed.length > 300 || !pending.length) return { action: "none" };
+
+  const list = pending.map((p, i) => `${i + 1}. #${p.id} — ${String(p.title || "").slice(0, 60)}`).join("\n");
+  const prompt = `Anh Phong dang co ${pending.length} bai cho duyet de len lich dang Fanpage:
+${list}
+
+Doc cau noi cua anh va tra ve DUY NHAT mot JSON, khong giai thich, khong markdown.
+
+Y dinh hop le:
+- {"action":"approve","ids":[60,51]}  — duyet cac bai do. ids la ID THAT (so sau dau #).
+- {"action":"approve_all"}            — duyet het (vd: "duyet ca", "duyet het", "ok tat ca", "len lich het")
+- {"action":"reject","ids":[60]}      — bo/huy bai do
+- {"action":"none"}                   — khong phai lenh duyet bai fanpage
+
+Quy tac QUAN TRONG:
+- Anh Phong co the goi theo THU TU trong danh sach ("chon 1,2,3" = bai thu 1, 2, 3)
+  hoac theo ID ("duyet 60" = bai #60). Hay suy ra ID THAT roi dien vao "ids".
+- Neu so anh noi vuot qua ${pending.length} bai dang co thi bo so do di, van lay cac so hop le.
+- "bai dau" = bai thu 1; "bai cuoi" = bai thu ${pending.length}.
+- Cau chi HOI ("bai 60 sao roi?", "con may bai?") -> "none".
+- Khong chac chan -> "none".`;
+
+  try {
+    const raw = await chatComplete({
+      system: prompt,
+      messages: [{ role: "user", content: trimmed }],
+      maxTokens: 100,
+      temperature: 0,
+    });
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return { action: "none" };
+    const p = JSON.parse(m[0]);
+    if (!p || typeof p.action !== "string") return { action: "none" };
+    const valid = new Set(pending.map((x) => x.id));
+    if (Array.isArray(p.ids)) p.ids = p.ids.map(Number).filter((id) => valid.has(id));
+    return p;
+  } catch (e) {
+    return { action: "none" };
+  }
+}
+
+module.exports = { classifyIntent, classifyTopicIntent, classifyQueueIntent, classifyReviewIntent };

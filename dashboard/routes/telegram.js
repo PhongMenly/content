@@ -377,6 +377,32 @@ async function handleMessage(message) {
           await sendMessage(targetChat, reviewReply);
           return;
         }
+
+        // Cu phap cung khong khop -> nho AI hieu y. Anh Phong danh so theo THU TU
+        // trong danh sach ("chon 1,2,3") con he thong luu theo ID (#60, #51);
+        // truoc day khong hieu nen roi xuong chat va Nhi bat anh go lai cu phap.
+        const db2 = require("../db/client");
+        const pending = (await db2.listPosts({}))
+          .filter((p) => p.status === "ready_for_review")
+          .sort((a, b) => b.id - a.id);
+        if (pending.length) {
+          const { classifyReviewIntent } = require("../lib/telegram/intent");
+          const ri = await classifyReviewIntent(text, pending);
+          const { approveByIds, rejectByIds } = require("../lib/telegram/review-flow");
+
+          if (ri.action === "approve_all") {
+            await sendMessage(targetChat, await approveByIds(pending.map((p) => p.id)));
+            return;
+          }
+          if (ri.action === "approve" && ri.ids && ri.ids.length) {
+            await sendMessage(targetChat, await approveByIds(ri.ids));
+            return;
+          }
+          if (ri.action === "reject" && ri.ids && ri.ids.length) {
+            await sendMessage(targetChat, await rejectByIds(ri.ids));
+            return;
+          }
+        }
       }
 
       // Cach noi tu nhien khong khop regex ("duyet het di em", "cho len lich luon")

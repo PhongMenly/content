@@ -187,4 +187,31 @@ async function checkForPostResults({ sendMessage }) {
   return newResults.length;
 }
 
-module.exports = { checkForNewDrafts, handleReviewReply, checkForPostResults, formatDraftMessage, markSentAndShown };
+// Duyet nhieu bai theo ID (dung cho luong hieu y noi tu nhien).
+async function approveByIds(ids) {
+  const done = [];
+  for (const id of ids) {
+    const post = await db.getPost(id);
+    if (!post) { done.push(`Khong tim thay bai #${id}`); continue; }
+    if (post.status !== "ready_for_review") {
+      done.push(`Bai #${id} khong o trang thai cho duyet (dang la: ${STATUS_LABELS[post.status] || post.status})`);
+      continue;
+    }
+    const updated = await approveOne(post);
+    done.push(`Da duyet #${updated.id} — len lich dang ${formatSlot(updated)}`);
+  }
+  return `[FANPAGE UYEN LINH]\n` + done.join("\n");
+}
+
+async function rejectByIds(ids) {
+  const done = [];
+  for (const id of ids) {
+    const post = await db.getPost(id);
+    if (!post) { done.push(`Khong tim thay bai #${id}`); continue; }
+    await db.updatePostStatus(post.id, "archived", { note: "Anh Phong bo qua Telegram", actor: "phong" });
+    done.push(`Da bo bai #${id}`);
+  }
+  return `[FANPAGE UYEN LINH]\n` + done.join("\n");
+}
+
+module.exports = { checkForNewDrafts, handleReviewReply, checkForPostResults, formatDraftMessage, markSentAndShown, approveByIds, rejectByIds };
